@@ -1,4 +1,5 @@
 {
+  "name": "macos",
   "dependencies": {},
   "devDependencies": {
     "@types/bun": "^1.3.3"
