@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>macos</title>
+<title>macOS Web Experience</title>
 <link rel="icon" href="favicon.png" type="image/png">
 
 <!-- External Libraries via CDN for single-file functionality -->
@@ -806,10 +806,12 @@
                     <i class="fas fa-chevron-left" style="color:#888;"></i>
                     <i class="fas fa-chevron-right" style="color:#888;"></i>
                     <i class="fas fa-redo" style="color:#555; font-size:12px;"></i>
-                    <input type="text" class="url-bar" value="en.wikipedia.org/wiki/MacOS" id="safari-url">
+                    // <input type="text" class="url-bar" value="en.wikipedia.org/wiki/MacOS" id="safari-url">
+                    <input type="text" class="url-bar" value="https://vectorindex.io/" id="safari-url">
                     <i class="fas fa-share-square" style="color:#555;"></i>
                 </div>
-                <iframe src="https://en.wikipedia.org/wiki/MacOS"class="safari-frame" id="safari-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+                // <iframe src="https://en.wikipedia.org/wiki/MacOS"class="safari-frame" id="safari-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+                <iframe src="https://vectorindex.io/"class="safari-frame" id="safari-frame" sandbox="allow-scripts allow-same-origin"></iframe>
             </div>
         `);
         $('#safari-url').on('keypress', function(e) {
