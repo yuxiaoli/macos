@@ -429,3 +429,67 @@ test('switching to a Finder title never lets Edit target an older TextEdit field
   await page.evaluate(async () => { await workspace.openPath(['Desktop', 'Project']); await workspace.openPath(['Documents']); });
   expect(await windows(page, 'finder')).toBe(1);
 });
+
+test('Terminal entry has no form outline and wraps long commands safely in a narrow window', async ({ page }) => {
+  await boot(page);
+  const terminalWindow = await open(page, 'terminal');
+  const input = terminalWindow.locator('.term-input');
+  await input.focus();
+  expect(await input.evaluate(el => ({ tag: el.tagName, outline: getComputedStyle(el).outlineStyle, weight: getComputedStyle(el).fontWeight }))).toEqual({ tag: 'TEXTAREA', outline: 'none', weight: '400' });
+  await page.setViewportSize({ width: 480, height: 620 });
+  const longFolder = 'A long working folder name '.repeat(3).trim();
+  await page.evaluate(name => fileStore.create(['Documents'], name, 'folder'), longFolder);
+  await terminal(terminalWindow, 'cd "/Documents/' + longFolder + '"');
+  await expect(terminalWindow.locator('.term-prompt')).toContainText(longFolder);
+  const longCommand = 'echo "' + 'readable wrapped command '.repeat(20) + '"';
+  await input.fill(longCommand);
+  await expect.poll(() => input.evaluate(el => el.getBoundingClientRect().height)).toBeGreaterThan(36);
+  expect(await input.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+  expect(await input.evaluate(el => el.scrollHeight <= el.clientHeight + 2)).toBe(true);
+  await input.press('Enter');
+  await expect(terminalWindow.locator('.term-history')).toContainText('readable wrapped command');
+  await input.press('ArrowUp'); await expect(input).toHaveValue(longCommand);
+  await input.press('ArrowDown'); await expect(input).toHaveValue('');
+  const pasted = 'echo first\nmkdir /Documents/not-created-by-paste';
+  await input.fill(pasted); await input.press('Enter');
+  expect(await page.evaluate(() => { try { fileStore.read(['Documents', 'not-created-by-paste']); return true; } catch (_) { return false; } })).toBe(false);
+  await input.press('ArrowUp'); await expect(input).toHaveValue(pasted);
+  const box = await terminalWindow.boundingBox(); expect(box.x).toBeGreaterThanOrEqual(0); expect(box.x + box.width).toBeLessThanOrEqual(481);
+});
+
+test('Calculator long results stay on one line and every key fits the compact window', async ({ page }) => {
+  await boot(page);
+  const calculator = await open(page, 'calculator');
+  await calculator.locator('.mac-calculator').focus();
+  await page.keyboard.type('123456789012345');
+  await expect(calculator.locator('.calculator-display')).toHaveText('123456789012345');
+  const sizes = await calculator.evaluate(el => {
+    const outer = el.getBoundingClientRect();
+    const display = el.querySelector('.calculator-display'), range = document.createRange();
+    range.selectNodeContents(display);
+    return { lines: new Set([...range.getClientRects()].map(rect => Math.round(rect.top))).size,
+      keysInside: [...el.querySelectorAll('.calculator-key')].every(key => { const rect = key.getBoundingClientRect(); return rect.top >= outer.top && rect.bottom <= outer.bottom + 1 && rect.right <= outer.right + 1; }),
+      displayFits: display.scrollWidth <= display.clientWidth + 1 };
+  });
+  expect(sizes).toEqual({ lines: 1, keysInside: true, displayFits: true });
+  const smallFont = await calculator.locator('.calculator-display').evaluate(el => parseFloat(getComputedStyle(el).fontSize));
+  await page.evaluate(id => { const record = wm.windows[id]; record.bounds.width = 400; wm.applyBounds(record); }, await calculator.getAttribute('id'));
+  await expect.poll(() => calculator.locator('.calculator-display').evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThan(smallFont);
+  await page.evaluate(id => { const record = wm.windows[id]; record.bounds.width = 280; wm.applyBounds(record); }, await calculator.getAttribute('id'));
+  expect(await calculator.locator('.calculator-display').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+  await calculator.locator('[data-calc-key="clear"]').click();
+  await expect(calculator.locator('.calculator-display')).toHaveText('0');
+});
+
+test('Settings switches remain keyboard-operable and update the saved preference', async ({ page }) => {
+  await boot(page);
+  const settings = await open(page, 'settings');
+  const reduce = settings.getByRole('switch', { name: /reduce motion/i });
+  await expect(reduce).not.toBeChecked();
+  await reduce.focus(); await reduce.press('Space');
+  await expect(reduce).toBeChecked();
+  await expect(page.locator('html')).toHaveClass(/reduced-motion/);
+  await reduce.press('Space');
+  await expect(reduce).not.toBeChecked();
+  await expect(page.locator('html')).not.toHaveClass(/reduced-motion/);
+});

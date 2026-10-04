@@ -217,3 +217,27 @@ test('Trash sort commands are real actions and restoring by button clears stale 
     trash.commands.sortName.run(); assert.equal(trash.container.find('.trash-row').first().attr('aria-label'), 'notes.txt');
     click($, 'Restore', trash.container); assert.equal(trash.selected, null); assert.equal(trash.commands.restore.enabled(), false);
 });
+
+test('Terminal wraps commands in an instance-scoped textarea without losing history or IME input', async t => {
+    const { $, wm } = setup(t);
+    const first = wm.openApp('terminal').controller, second = wm.openApp('terminal', { newWindow: true }).controller;
+    assert.equal(first.input[0].tagName, 'TEXTAREA');
+    assert.equal(first.input.attr('rows'), '1');
+    assert.notEqual(first.input.attr('id'), second.input.attr('id'));
+    assert.equal(first.container.find('.term-prompt').attr('for'), first.input.attr('id'));
+    const long = 'echo ' + 'a long command '.repeat(35);
+    first.input.val(long).trigger('input');
+    assert.equal(first.input.val(), long);
+    first.input.trigger($.Event('keydown', { key: 'Enter', isComposing: true }));
+    assert.equal(first.input.val(), long);
+    assert.equal(first.history.length, 0);
+    await first.run(long);
+    first.input.val('unfinished draft');
+    first.input.trigger($.Event('keydown', { key: 'ArrowUp' }));
+    assert.equal(first.input.val(), long);
+    assert.equal(first.input[0].selectionStart, long.length);
+    first.input.trigger($.Event('keydown', { key: 'ArrowDown' }));
+    assert.equal(first.input.val(), 'unfinished draft');
+    assert.equal(second.input.val(), '');
+    assert.ok(first.historyElement.text().includes('a long command'));
+});

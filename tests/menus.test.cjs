@@ -5,6 +5,57 @@ test('all menu entries and real disabled states exist',()=>{const x=setup();try{
 test('menu pointerdown preserves editor target and selection, Escape restores it',()=>{const x=setup();try{const el=x.w.document.querySelector('textarea');const r={id:'a',appId:'textedit',name:'TextEdit',controller:{commands:{}}};x.setRecord(r);el.focus();el.setSelectionRange(1,5);const button=x.menus.buttons[3];button.dispatchEvent(new x.w.Event('pointerdown'));button.focus();button.click();assert.equal(x.menus.context.element,el);assert.equal(x.menus.context.start,1);x.w.document.dispatchEvent(new x.w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));assert.equal(x.w.document.activeElement,el);assert.equal(el.selectionStart,1);assert.equal(el.selectionEnd,5);}finally{x.close();}});
 test('Cut leaves content intact if clipboard permission fails',async()=>{const x=setup();try{const el=x.w.document.querySelector('textarea');el.focus();el.setSelectionRange(0,5);Object.defineProperty(x.w.navigator,'clipboard',{value:{writeText:async()=>{throw new Error('Permission denied');}}});await x.menus.edit('cut',x.menus.capture());assert.equal(el.value,'hello world');assert.match(x.calls[0][1],/Clipboard action failed/);}finally{x.close();}});
 test('Cut only removes after successful copy and detects intervening edits',async()=>{const x=setup();try{const el=x.w.document.querySelector('textarea');el.focus();el.setSelectionRange(0,5);let resolve;Object.defineProperty(x.w.navigator,'clipboard',{value:{writeText:()=>new Promise(r=>resolve=r)}});const p=x.menus.edit('cut',x.menus.capture());el.value='new content';resolve();await p;assert.equal(el.value,'new content');assert.match(x.calls[0][1],/nothing was removed/);}finally{x.close();}});
-test('menu keyboard skips disabled entries and supports submenu back navigation',()=>{const x=setup();try{x.menus.openMenu('File',x.menus.buttons[2]);const enabled=[...x.menus.panel.querySelectorAll('button:enabled')];x.w.document.dispatchEvent(new x.w.KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}));assert.equal(x.w.document.activeElement,enabled[1]);x.menus.close();x.menus.openMenu('View',x.menus.buttons[4]);const appearance=x.menus.panel.querySelector('[data-command=appearance]');appearance.focus();appearance.dispatchEvent(new x.w.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));assert.ok(x.menus.panel.querySelector('.submenu'));x.w.document.activeElement.dispatchEvent(new x.w.KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true}));assert.equal(x.menus.panel.querySelector('.submenu'),null);assert.equal(x.w.document.activeElement,appearance);}finally{x.close();}});
+test('menu keyboard skips disabled entries and supports submenu back navigation',()=>{const x=setup();try{x.menus.openMenu('File',x.menus.buttons[2]);const enabled=[...x.menus.panel.querySelectorAll('button:enabled')];x.w.document.dispatchEvent(new x.w.KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}));assert.equal(x.w.document.activeElement,enabled[1]);x.menus.close();x.menus.openMenu('View',x.menus.buttons[4]);const appearance=x.menus.panel.querySelector('[data-command=appearance]');appearance.focus();appearance.dispatchEvent(new x.w.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));assert.ok(x.w.document.querySelector('.submenu'));x.w.document.activeElement.dispatchEvent(new x.w.KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true}));assert.equal(x.w.document.querySelector('.submenu'),null);assert.equal(x.w.document.activeElement,appearance);}finally{x.close();}});
 test('Spotlight searches all folders and follows file changes',()=>{const x=setup();try{x.store.create(['Documents'],'Deep','folder');x.store.create(['Documents','Deep'],'needle.txt','text','hello');x.menus.spotlight();const input=x.menus.panel.querySelector('input');input.value='needle';input.dispatchEvent(new x.w.Event('input'));assert.match(x.menus.panel.textContent,/Documents\/Deep\/needle.txt/);x.store.rename(['Documents','Deep','needle.txt'],'renamed.txt');assert.match(x.menus.panel.textContent,/No matches/);}finally{x.close();}});
 test('status panels report browser limitations and calendar changes months',()=>{const x=setup();try{const battery=x.w.document.querySelector('[data-status=battery]');x.menus.openStatus('battery',battery);assert.match(x.menus.panel.textContent,/unavailable/);const clock=x.w.document.querySelector('[data-status=clock]');x.menus.openStatus('clock',clock);const prior=x.menus.month.getMonth();[...x.menus.panel.querySelectorAll('button')].find(b=>b.textContent==='Next month').click();assert.equal(x.menus.month.getMonth(),(prior+1)%12);assert.equal(x.menus.panel.querySelectorAll('.calendar-grid b').length,7);}finally{x.close();}});
+
+test('menu presentation keeps labels, shortcut hints, checks and groups accessible',()=>{
+ const x=setup();
+ try {
+  x.menus.openMenu('File',x.menus.buttons[2]);
+  const newFolder=x.menus.panel.querySelector('[data-command=newFolder]');
+  assert.equal(newFolder.getAttribute('aria-label'),'New Folder');
+  assert.equal(newFolder.querySelector('.menu-command-label').textContent,'New Folder');
+  assert.equal(newFolder.querySelector('.menu-command-key').textContent,'⇧⌘N');
+  assert.equal(newFolder.querySelector('.menu-command-key').getAttribute('aria-hidden'),'true');
+  assert.ok(x.menus.panel.querySelector('[role=separator]'));
+  x.menus.close();
+  x.menus.openMenu('View',x.menus.buttons[4]);
+  x.menus.panel.querySelector('[data-command=appearance]').click();
+  const dark=x.menus.submenu.querySelector('[data-command=appearance-dark]');
+  assert.equal(dark.getAttribute('role'),'menuitemcheckbox');
+  assert.equal(dark.getAttribute('aria-checked'),'true');
+  assert.equal(dark.textContent,'Dark');
+ } finally {x.close();}
+});
+
+test('side submenu stays inside the viewport and closes with its parent',()=>{
+ const x=setup();
+ try {
+  x.menus.openMenu('View',x.menus.buttons[4]);
+  const appearance=x.menus.panel.querySelector('[data-command=appearance]');
+  x.menus.panel.getBoundingClientRect=()=>({left:780,right:996,top:30,bottom:180});
+  appearance.getBoundingClientRect=()=>({left:785,right:991,top:80,bottom:103});
+  Object.defineProperty(x.w.HTMLElement.prototype,'offsetWidth',{configurable:true,get(){return this.classList.contains('submenu')?160:0;}});
+  Object.defineProperty(x.w.HTMLElement.prototype,'offsetHeight',{configurable:true,get(){return this.classList.contains('submenu')?80:0;}});
+  appearance.click();
+  const submenu=x.menus.submenu;
+  assert.equal(submenu.parentElement,x.w.document.body);
+  assert.equal(submenu.style.left,'622px');
+  assert.equal(submenu.style.top,'75px');
+  assert.equal(appearance.getAttribute('aria-expanded'),'true');
+  submenu.dispatchEvent(new x.w.Event('pointerdown',{bubbles:true}));
+  assert.equal(x.menus.submenu,submenu);
+  submenu.querySelector('[data-command=appearance-light]').click();
+  assert.equal(x.wm.settings.appearance,'light');
+  assert.equal(x.menus.panel,null);
+  assert.equal(x.menus.submenu,null);
+  assert.equal(submenu.isConnected,false);
+  assert.equal(appearance.getAttribute('aria-expanded'),'false');
+  x.menus.openMenu('View',x.menus.buttons[4]);
+  x.menus.panel.querySelector('[data-command=appearance]').click();
+  x.w.document.dispatchEvent(new x.w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+  assert.equal(x.w.document.querySelector('.submenu'),null);
+  assert.equal(x.menus.panel,null);
+ } finally {x.close();}
+});
