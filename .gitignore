@@ -4,3 +4,5 @@ node_modules/
 dist/
 .DS_Store
 refs/
+playwright-report/
+test-results/

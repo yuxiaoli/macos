@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1200" viewBox="0 0 1920 1200">
+ <defs>
+  <linearGradient id="sky" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#172052"/><stop offset=".44" stop-color="#56368d"/><stop offset="1" stop-color="#b052a7"/></linearGradient>
+  <linearGradient id="ridge" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#dc68ab"/><stop offset=".35" stop-color="#ab3d92"/><stop offset=".75" stop-color="#662575"/><stop offset="1" stop-color="#3d266b"/></linearGradient>
+  <linearGradient id="valley" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#a578d3"/><stop offset=".36" stop-color="#7f4cc5"/><stop offset=".7" stop-color="#403a98"/><stop offset="1" stop-color="#1c2b5f"/></linearGradient>
+  <linearGradient id="water" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#6286cf"/><stop offset=".45" stop-color="#354b94"/><stop offset="1" stop-color="#111d48"/></linearGradient>
+ </defs>
+ <path fill="url(#sky)" d="M0 0h1920v1200H0z"/>
+ <path fill="url(#ridge)" d="M-200-20h1510c-206 216-118 303-369 434-244 127-332 168-459 359C329 1003 80 1001-200 1060Z"/>
+ <path fill="url(#valley)" d="M1450-90c-110 242-266 279-390 442-153 201-96 277-293 394C555 872 200 856-120 1190l2100 60V-90Z"/>
+ <path fill="url(#water)" d="M2040 26c-386 195-176 403-477 591-246 154-287 195-579 220-284 24-524 236-591 433h1647Z"/>
+ <path fill="#111e48" opacity=".28" d="M2040 429c-103 257-488 310-630 448-115 112-113 243-219 393h849Z"/>
+</svg>

@@ -4,9 +4,12 @@
   "scripts": {
     "test": "node --test tests/*.test.cjs",
     "check": "node scripts/check.cjs",
-    "start": "node scripts/serve.cjs"
+    "start": "node scripts/serve.cjs",
+    "test:browser": "playwright test",
+    "test:browser:chromium": "playwright test --project=chromium"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "jquery": "3.6.0",
     "jsdom": "^26.1.0"
   }

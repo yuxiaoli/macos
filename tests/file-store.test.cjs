@@ -340,6 +340,10 @@ test('every mutating method preserves memory, storage and observer silence on qu
         restore: (store) => {
             const id = store.trash(['Documents', 'notes.txt']);
             return () => store.restore(id);
+        },
+        emptyTrash: (store) => {
+            store.trash(['Documents', 'notes.txt']);
+            return () => store.emptyTrash();
         }
     };
     for (const [name, prepare] of Object.entries(actions)) await t.test(name, () => {
@@ -466,6 +470,10 @@ test('every mutation refuses stale-tab writes and preserves the other tab data',
         restore: (store) => {
             const id = store.trash(['Documents', 'notes.txt']);
             return () => store.restore(id);
+        },
+        emptyTrash: (store) => {
+            store.trash(['Documents', 'notes.txt']);
+            return () => store.emptyTrash();
         }
     };
     for (const [name, prepare] of Object.entries(actions)) await t.test(name, () => {
@@ -525,4 +533,46 @@ test('a denied browser localStorage getter does not crash application startup', 
     assert.equal(store.readOnly, true);
     assert.match(store.storageWarning, /could not be read/);
     assert.equal(store.list([]).length, 3);
+});
+
+
+test('path-aware notifications are defensive and describe every affected path', () => {
+    const { store } = fresh();
+    const events = [];
+    store.subscribe(event => { event.paths.length = 0; if (event.path) event.path[0] = 'Corrupt'; });
+    store.subscribe(event => events.push(event));
+    const path = store.create(['Documents'], 'new.txt');
+    store.write(path, 'hello');
+    const renamed = store.rename(path, 'renamed.txt');
+    const id = store.trash(renamed);
+    store.restore(id);
+    assert.deepEqual(events[0], { type: 'create', path, paths: [path] });
+    assert.deepEqual(events[1], { type: 'write', path, paths: [path] });
+    assert.deepEqual(events[2], { type: 'rename', paths: [path, renamed], oldPath: path, newPath: renamed });
+    assert.deepEqual(events[3], { type: 'trash', paths: [renamed], path: renamed, trashId: id });
+    assert.deepEqual(events[4], { type: 'restore', paths: [renamed], path: renamed, trashId: id });
+    events[0].path[0] = 'Changed';
+    assert.equal(store.read(renamed).content, 'hello');
+});
+
+test('emptyTrash atomically removes all trash, preserves live files and never reuses IDs', () => {
+    const { store, storage } = fresh();
+    const first = store.trash(['Documents', 'notes.txt']);
+    store.create(['Desktop', 'Project'], 'nested.txt', 'text', 'Nested');
+    const second = store.trash(['Desktop', 'Project']);
+    const root = store.read([]), events = []; store.subscribe(event => events.push(event));
+    const writes = storage.writes;
+    assert.equal(store.emptyTrash(), 2);
+    assert.equal(storage.writes, writes + 1);
+    assert.deepEqual(store.read([]), root); assert.deepEqual(store.listTrash(), []);
+    assert.deepEqual(events, [{ type: 'emptyTrash', paths: [['Documents', 'notes.txt'], ['Desktop', 'Project']], trashIds: [first, second] }]);
+    assert.equal(new MacFileStore(storage).listTrash().length, 0);
+    assert.notEqual(store.trash(['Desktop', 'Welcome.txt']), first);
+    assert.throws(() => store.restore(first), code('ENOENT'));
+});
+
+test('read-only corrupted storage rejects emptyTrash without resetting saved bytes', () => {
+    const storage = new MemoryStorage('{broken'); const store = new MacFileStore(storage);
+    assert.throws(() => store.emptyTrash(), code('EROFS'));
+    assert.equal(storage.raw(), '{broken'); assert.equal(storage.writes, 0);
 });
