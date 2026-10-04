@@ -1,34 +1,68 @@
-/* Fixed-document apps use flex/grid minimums so a smaller window never crops drawing data. */
-.mac-calculator, .mac-safari, .mac-sketch { width:100%; height:100%; min-width:0; min-height:0; box-sizing:border-box; }
-.mac-calculator button, .mac-safari button, .mac-sketch button, .safari-external { font:inherit; cursor:pointer; }
-.mac-calculator button:disabled, .mac-safari button:disabled, .mac-sketch button:disabled { opacity:.38; cursor:default; }
-.mac-calculator button:focus-visible, .mac-safari button:focus-visible, .mac-sketch button:focus-visible, .safari-external:focus-visible { outline:2px solid #2997ff; outline-offset:2px; }
-.mac-calculator { display:flex; flex-direction:column; gap:10px; padding:12px; color:#fff; background:#25272c; overflow:auto; outline:none; }
-.calculator-display { display:block; min-height:56px; padding:6px 4px; width:100%; text-align:right; font-size:clamp(24px,4vw,40px); font-weight:300; line-height:1.25; overflow-wrap:anywhere; user-select:text; font-variant-numeric:tabular-nums; }
-.calculator-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); grid-template-rows:repeat(5,minmax(38px,1fr)); gap:7px; flex:1; }
-.calculator-key { border:0; border-radius:10px; padding:5px; color:#fff; background:#50535a; font-size:21px !important; min-width:0; }
-.calculator-key:hover { filter:brightness(1.16); }
-.calculator-key:active { filter:brightness(1.35); }
-.calculator-key.utility { background:#777b85; }
-.calculator-key.operator { background:#ff9f0a; color:#17191d; }
-.calculator-key.zero { grid-column:span 2; text-align:left; padding-left:22px; }
-.calculator-help { font-size:10px; color:#c6c9d0; margin:0; text-align:center; }
-.mac-safari { display:flex; flex-direction:column; background:#fff; color:#202631; overflow:hidden; }
-.safari-toolbar { display:flex; gap:5px; align-items:center; flex-wrap:wrap; flex-shrink:0; padding:8px; background:#e5e8ef; border-bottom:1px solid #c5cad4; }
-.safari-toolbar button, .safari-external, .sketch-toolbar button { min-height:29px; border:1px solid #c0c5d0; border-radius:5px; background:#fff; color:#222938; padding:4px 8px; font-size:12px; }
-.safari-toolbar button:hover:not(:disabled), .sketch-toolbar button:hover:not(:disabled), .safari-external:hover { background:#edf5ff; }
-.safari-address-form { display:flex; flex:1 1 180px; min-width:140px; gap:5px; margin:0; }
-.safari-address-input { width:100%; min-width:0; border:1px solid #b6bfcd; border-radius:6px; padding:6px 10px; color:#1d2632; background:#fff; user-select:text; font-size:12px; }
-.safari-external { text-decoration:none; white-space:nowrap; }
-.safari-status, .safari-limitations { flex-shrink:0; margin:0; padding:6px 10px; color:#475264; background:#f0f3f8; font-size:11px; line-height:1.4; }
-.safari-limitations { border-top:1px solid #dbe1eb; }
-.safari-webview { border:0; display:block; width:100%; flex:1 1 0; min-height:40px; background:#fff; }
-.mac-sketch { display:flex; flex-direction:column; background:#dce1e9; color:#202938; overflow:hidden; }
-.sketch-toolbar { display:flex; flex-wrap:wrap; gap:5px; align-items:center; flex-shrink:0; padding:7px; background:#eef1f6; border-bottom:1px solid #c4ccd8; }
-.sketch-toolbar label { display:flex; align-items:center; gap:4px; font-size:11px; }
-.sketch-color { width:32px; height:27px; padding:0; border:0; background:transparent; }
-.sketch-size { width:65px; accent-color:#007aff; }
-.sketch-viewport { display:flex; min-width:0; min-height:0; flex:1 1 0; padding:12px; overflow:hidden; background:repeating-conic-gradient(#d9dfe8 0% 25%,#e7ebf1 0% 50%) 50% / 20px 20px; }
-.sketch-viewport canvas { display:block; width:100%; height:100%; min-height:0; min-width:0; object-fit:contain; touch-action:none; cursor:crosshair; }
-.sketch-viewport canvas:focus-visible { outline:2px solid #007aff; outline-offset:2px; }
-.sketch-status { flex-shrink:0; margin:0; padding:6px 10px; font-size:11px; line-height:1.4; background:#eef1f6; border-top:1px solid #c4ccd8; }
+/* App chrome shares the desktop material; document surfaces keep their own identity. */
+.mac-calculator, .mac-safari, .mac-sketch { width: 100%; height: 100%; min-width: 0; min-height: 0; box-sizing: border-box; }
+.mac-calculator button, .mac-safari button, .mac-sketch button, .safari-external { font: inherit; cursor: default; }
+.mac-calculator button:disabled, .mac-safari button:disabled, .mac-sketch button:disabled { opacity: .3; cursor: default; }
+.mac-calculator button:focus-visible, .mac-safari button:focus-visible, .mac-sketch button:focus-visible, .safari-external:focus-visible { outline: 2px solid #69adf6; outline-offset: -2px; }
+
+/* The compact macOS calculator is a single panel, with a continuous key grid. */
+.window[data-app='calculator'] .window-header { background: #2f3032; border-bottom-color: transparent; color: #ededed; }
+.mac-calculator { display: flex; flex-direction: column; container-type: inline-size; color: #fff; background: #2f3032; overflow: auto; outline: none; }
+.calculator-display { display: flex; flex-shrink: 0; justify-content: flex-end; align-items: flex-end; height: 88px; min-height: 88px; max-height: 88px; padding: 12px 18px 14px; width: 100%; text-align: right; font-size: min(48px, calc((100cqw - 36px) / var(--display-characters, 1) / .62)); font-weight: 300; letter-spacing: -.8px; line-height: 1.1; white-space: nowrap; user-select: text; font-variant-numeric: tabular-nums; }
+.calculator-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(42px, 1fr)); min-height: 0; gap: 1px; flex: 1; background: #2f3032; border-top: 1px solid #27282a; }
+.calculator-key { min-width: 0; min-height: 0; padding: 5px; border: 0; border-radius: 0; color: #fff; background: #626365; font-size: 25px !important; font-weight: 400 !important; line-height: 1 !important; box-shadow: inset 0 1px 0 #ffffff08; transition: background .1s; }
+.calculator-key:hover { background: #717274; }
+.calculator-key:active { background: #929395; }
+.calculator-key.utility { background: #454648; font-size: 20px !important; }
+.calculator-key.utility:hover { background: #555658; }
+.calculator-key.operator { background: #f49b24; font-size: 29px !important; font-weight: 300 !important; }
+.calculator-key.operator:hover { background: #ffb345; }
+.calculator-key.operator:active { background: #d68518; }
+.calculator-key.zero { grid-column: span 2; text-align: left; padding-left: calc(25% - 7px); }
+.calculator-help { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Navigation is quiet; the address field is the primary control. */
+.mac-safari { display: flex; flex-direction: column; background: #fff; color: var(--text-color); overflow: hidden; }
+.safari-toolbar { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; flex-shrink: 0; min-height: 49px; padding: 8px 12px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.safari-toolbar button, .safari-external, .sketch-toolbar button { display: inline-flex; align-items: center; justify-content: center; min-height: 28px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--text-color); padding: 4px 9px; font-size: 12px; font-weight: 400; text-decoration: none; }
+.safari-toolbar button:hover:not(:disabled), .sketch-toolbar button:hover:not(:disabled), .safari-external:hover { background: var(--surface-hover); }
+.safari-toolbar button:active:not(:disabled), .sketch-toolbar button:active:not(:disabled), .safari-external:active { background: color-mix(in srgb, var(--surface-hover) 80%, var(--text-color) 10%); }
+.app-toolbar-icon { width: 29px; padding: 4px !important; }
+.app-toolbar-icon svg { width: 17px; height: 17px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.65; stroke-linecap: round; stroke-linejoin: round; }
+.safari-address-form { display: flex; align-items: center; flex: 1 1 240px; min-width: 140px; max-width: 720px; height: 29px; margin: 0 10px; padding-right: 2px; border: 1px solid var(--border); border-radius: 6px; background: var(--field-bg); box-shadow: 0 1px 1px #00000008; }
+.safari-address-form:focus-within { outline: 2px solid #69adf680; outline-offset: 1px; }
+.safari-address-input { width: 100%; min-width: 0; height: 27px; border: 0; border-radius: 6px; outline: 0 !important; padding: 4px 10px; color: var(--text-color); background: transparent; user-select: text; font-size: 12px; text-align: center; }
+.safari-address-input:focus { text-align: left; }
+.safari-address-form button { min-height: 23px; font-size: 11px; padding: 2px 7px; color: var(--muted); }
+.safari-external { gap: 5px; margin-left: auto; white-space: nowrap; font-size: 11px; }
+.safari-external svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.safari-status, .safari-limitations { flex-shrink: 0; margin: 0; padding: 6px 14px; color: var(--muted); background: var(--window-bg); font-size: 10px; line-height: 1.5; }
+.safari-status { border-bottom: 1px solid var(--border); }
+.safari-limitations { border-top: 1px solid var(--border); }
+.safari-limitations summary { width: fit-content; cursor: default; }
+.safari-limitations summary:focus-visible { outline: 2px solid #69adf6; outline-offset: 2px; border-radius: 2px; }
+.safari-limitations p { margin: 5px 0 2px; max-width: 680px; }
+.safari-webview { border: 0; display: block; width: 100%; flex: 1 1 0; min-height: 40px; background: #fff; }
+
+/* A neutral workbench lets the drawing, rather than the controls, carry the color. */
+.mac-sketch { display: flex; flex-direction: column; background: var(--window-bg); color: var(--text-color); overflow: hidden; }
+.sketch-toolbar { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; flex-shrink: 0; min-height: 47px; padding: 8px 12px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.sketch-toolbar label { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); }
+.sketch-toolbar label + label { margin: 0 10px 0 14px; }
+.sketch-toolbar [data-app-command='undo'] { margin-left: 2px; }
+.sketch-toolbar [data-app-command='clear'] { margin-right: auto; }
+.sketch-color { appearance: none; width: 24px; height: 24px; padding: 2px; border: 1px solid var(--border); border-radius: 50%; background: var(--field-bg); cursor: default; }
+.sketch-color::-webkit-color-swatch-wrapper { padding: 0; }
+.sketch-color::-webkit-color-swatch { border: 0; border-radius: 50%; }
+.sketch-color::-moz-color-swatch { border: 0; border-radius: 50%; }
+.sketch-size { width: 70px; height: 18px; margin: 0; accent-color: var(--accent); }
+.sketch-viewport { display: flex; min-width: 0; min-height: 0; flex: 1 1 0; padding: 22px; overflow: hidden; background: color-mix(in srgb, var(--window-bg) 85%, #808080); }
+.sketch-viewport canvas { display: block; width: 100%; height: 100%; min-height: 0; min-width: 0; object-fit: contain; touch-action: none; cursor: crosshair; filter: drop-shadow(0 2px 4px #0003); }
+.sketch-viewport canvas:focus-visible { outline: 2px solid #69adf6; outline-offset: 3px; }
+.sketch-status { flex-shrink: 0; margin: 0; padding: 5px 12px; color: var(--muted); font-size: 10px; line-height: 1.5; background: var(--surface); border-top: 1px solid var(--border); }
+@media (max-width: 600px) {
+    .safari-toolbar, .sketch-toolbar { padding: 6px 8px; }
+    .safari-address-form { margin: 0 3px; }
+    .sketch-toolbar label + label { margin-left: 8px; margin-right: 5px; }
+    .sketch-size { width: 54px; }
+    .sketch-viewport { padding: 14px; }
+}

@@ -13,7 +13,7 @@ class MacMenus {
   for(const [name,label] of [['battery','Battery'],['network','Network'],['search','Search'],['control','Control Center'],['clock','Clock']]) { const b=this.button(label,()=>this.openStatus(name,b));b.dataset.status=name;b.setAttribute('aria-label',label);b.setAttribute('aria-expanded','false');right.append(b); }
   this.clock=right.querySelector('[data-status="clock"]');this.updateClock();this.clockTimer=setInterval(()=>this.updateClock(),1000);
   wm.subscribe?.(()=>this.update());this.update();
-  document.addEventListener('pointerdown',e=>{if(this.panel&&!this.panel.contains(e.target)&&!e.target.closest('#menubar'))this.close();});
+  document.addEventListener('pointerdown',e=>{if(this.panel&&!this.panel.contains(e.target)&&!this.submenu?.contains(e.target)&&!e.target.closest('#menubar'))this.close();});
   document.addEventListener('keydown',e=>this.keydown(e));
   global.addEventListener('online',()=>this.refreshNetwork());global.addEventListener('offline',()=>this.refreshNetwork());
   store.subscribe(()=>{if(this.panel?.classList.contains('spotlight'))this.search(this.panel.querySelector('input').value);});
@@ -23,7 +23,7 @@ class MacMenus {
  updateClock(){this.clock.textContent=new Date().toLocaleString(undefined,{weekday:'short',hour:'numeric',minute:'2-digit',hour12:!this.wm.settings.clock24});}
  capture(){const el=document.activeElement;return {record:this.wm.activeWindow,element:el,start:typeof el.selectionStart==='number'?el.selectionStart:null,end:typeof el.selectionEnd==='number'?el.selectionEnd:null};}
  restore(context){if(!context?.element?.isConnected)return;context.element.focus({preventScroll:true});if(context.start!==null)try{context.element.setSelectionRange(context.start,context.end);}catch(_){}}
- close(restore=true){this.panelCleanup?.();this.panelCleanup=null;const context=this.context;this.panel?.remove();this.panel=null;this.context=null;document.querySelectorAll('#menubar [aria-expanded]').forEach(b=>b.setAttribute('aria-expanded','false'));if(restore)this.restore(context);}
+ close(restore=true){this.closeSubmenu();this.panelCleanup?.();this.panelCleanup=null;const context=this.context;this.panel?.remove();this.panel=null;this.context=null;document.querySelectorAll('#menubar [aria-expanded]').forEach(b=>b.setAttribute('aria-expanded','false'));if(restore)this.restore(context);}
  showPanel(anchor,className='desktop-menu',context){this.close(false);this.context=context||this.capture();const p=document.createElement('div');p.className='menu-panel '+className;p.setAttribute('role','menu');document.body.append(p);this.panel=p;this.anchor=anchor;anchor?.setAttribute('aria-expanded','true');const r=anchor?.getBoundingClientRect();p.style.top=(r?r.bottom+5:60)+'px';p.style.left=(r?Math.max(8,Math.min(r.left,innerWidth-330)):Math.max(8,(innerWidth-600)/2))+'px';return p;}
  controller(record){return record?.controller||this.workspace.desktopController||this.workspace.desktop;}
  descriptor(id,label,record){const controller=this.controller(record);const commands=controller?.commands||this.workspace.getCommands?.(record)||{};const c=commands[id];return {id,label:label||c?.label||id,enabled:()=>Boolean(c)&&(typeof c.enabled==='function'?c.enabled():c.enabled!==false),checked:c?.checked,run:()=>c?.run()};}
@@ -50,8 +50,34 @@ class MacMenus {
  enabled(c){return typeof c.enabled==='function'?c.enabled():c.enabled!==false;}
  async execute(c,context){if(!this.enabled(c))return;this.close(false);this.restore(context);try{await c.run();}catch(e){this.workspace.report(e.message,true);}}
  openMenu(name,anchor,context){if(this.panel&&this.menuName===name&&this.panel.classList.contains('desktop-menu')){this.close();return;}context=context||this.capture();this.menuName=name;const panel=this.showPanel(anchor,'desktop-menu',context);this.renderItems(panel,this.registry(context.record,context)[name],context);panel.querySelector('button:not(:disabled)')?.focus();}
- renderItems(panel,items,context){items.forEach(c=>{const b=this.button(c.label,()=>{if(c.children){this.openSubmenu(b,c.children,context);return;}this.execute(c,context);});b.dataset.command=c.id;b.disabled=!this.enabled(c);const checked=typeof c.checked==='function'?c.checked():c.checked;if(c.checked!==undefined){b.setAttribute('role','menuitemcheckbox');b.setAttribute('aria-checked',String(Boolean(checked)));if(checked)b.textContent='✓ '+b.textContent;}else b.setAttribute('role','menuitem');if(c.children){b.textContent+='  ›';b.setAttribute('aria-haspopup','menu');b.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();e.stopPropagation();this.openSubmenu(b,c.children,context);}});}panel.append(b);});}
- openSubmenu(anchor,items,context){this.panel.querySelector('.submenu')?.remove();const p=document.createElement('div');p.className='submenu';p.setAttribute('role','menu');this.panel.append(p);this.renderItems(p,items,context);p.querySelector('button:enabled')?.focus();p.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'){e.preventDefault();e.stopPropagation();p.remove();anchor.focus();}});}
+ renderItems(panel,items,context){
+  const shortcuts={newFinder:'⌘N',newTerminal:'⌘N',newDocument:'⌘N',newWindow:'⌘N',newFolder:'⇧⌘N',save:'⌘S',saveAs:'⇧⌘S',close:'⌘W',cut:'⌘X',copy:'⌘C',paste:'⌘V',selectAll:'⌘A',overview:'F3'};
+  const groupStarts=new Set(['settings','restart','quit','open','save','close','cut','selectAll','appearance','sortName','go-Trash','back','reveal','newWindow','clear']);
+  items.forEach((c,index)=>{
+   if(index&&(groupStarts.has(c.id)||(c.id.startsWith('window-')&&!items[index-1].id.startsWith('window-')))){
+    const separator=document.createElement('div');separator.className='menu-separator';separator.setAttribute('role','separator');panel.append(separator);
+   }
+   const b=this.button(c.label,()=>{if(c.children){this.openSubmenu(b,c.children,context);return;}this.execute(c,context);});
+   b.dataset.command=c.id;b.disabled=!this.enabled(c);b.textContent='';
+   const label=document.createElement('span');label.className='menu-command-label';label.textContent=c.label;b.append(label);
+   if(shortcuts[c.id]){const key=document.createElement('span');key.className='menu-command-key';key.setAttribute('aria-hidden','true');key.textContent=shortcuts[c.id];b.append(key);}
+   const checked=typeof c.checked==='function'?c.checked():c.checked;
+   if(c.checked!==undefined){b.setAttribute('role','menuitemcheckbox');b.setAttribute('aria-checked',String(Boolean(checked)));}else b.setAttribute('role','menuitem');
+   if(c.children){b.setAttribute('aria-haspopup','menu');b.setAttribute('aria-expanded','false');b.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();e.stopPropagation();this.openSubmenu(b,c.children,context);}});}
+   panel.append(b);
+  });
+ }
+ closeSubmenu(){this.submenu?.remove();this.submenu=null;this.submenuAnchor?.setAttribute('aria-expanded','false');this.submenuAnchor=null;}
+ openSubmenu(anchor,items,context){
+  this.closeSubmenu();
+  const p=document.createElement('div');p.className='menu-panel submenu';p.setAttribute('role','menu');p.setAttribute('aria-label',anchor.getAttribute('aria-label')||'Submenu');
+  this.submenu=p;this.submenuAnchor=anchor;anchor.setAttribute('aria-expanded','true');document.body.append(p);this.renderItems(p,items,context);
+  const row=anchor.getBoundingClientRect(),parent=this.panel.getBoundingClientRect(),width=p.offsetWidth,height=p.offsetHeight;
+  const preferred=parent.right-2,left=preferred+width>innerWidth-8?parent.left-width+2:preferred;
+  p.style.left=Math.max(8,Math.min(left,innerWidth-width-8))+'px';p.style.top=Math.max(8,Math.min(row.top-5,innerHeight-height-8))+'px';
+  p.querySelector('button:enabled')?.focus();
+  p.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'){e.preventDefault();e.stopPropagation();this.closeSubmenu();anchor.focus();}});
+ }
  canEdit(id,context){const el=context?.element;const record=context?.record;if(el&&((record?.element&&!record.element.contains(el))||(!record&&el.closest?.('.window'))))return false;if(!el||!['INPUT','TEXTAREA'].includes(el.tagName)||el.disabled||el.readOnly||el.type==='file'||record?.appId==='safari'&&el.tagName==='IFRAME')return false;if(['copy','cut'].includes(id))return context.start!==context.end;if(['undo','redo'].includes(id)){const c=record?.controller?.commands?.[id];return c?(typeof c.enabled==='function'?c.enabled():c.enabled!==false):typeof document.execCommand==='function';}return true;}
  async edit(id,context){if(!this.canEdit(id,context))return;const el=context.element;const original=el.value;this.restore(context);const c=context.record?.controller?.commands?.[id];if(c&&['undo','redo'].includes(id)){await c.run();return;}if(id==='selectAll'){el.select();return;}if(['undo','redo'].includes(id)){if(!document.execCommand(id))this.workspace.report('No '+id+' is available for this field.');return;}try{if(!navigator.clipboard)throw new Error('Clipboard is unavailable in this browser or context.');if(id==='copy'||id==='cut'){await navigator.clipboard.writeText(el.value.slice(context.start,context.end));if(id==='copy')return;if(!el.isConnected||el.value!==original){this.workspace.report('Text changed while copying; nothing was removed.',true);return;}el.setRangeText('',context.start,context.end,'end');}else{const text=await navigator.clipboard.readText();if(!el.isConnected||el.value!==original){this.workspace.report('Text changed while reading the clipboard; paste was cancelled.',true);return;}el.setRangeText(text,context.start,context.end,'end');}el.dispatchEvent(new Event('input',{bubbles:true}));}catch(e){this.workspace.report('Clipboard action failed: '+e.message,true);}}
  keydown(e){if(document.querySelector('dialog[open]'))return;if(this.panel){if(e.key==='Escape'){e.preventDefault();this.close();return;}if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)&&!this.panel.classList.contains('spotlight')){e.preventDefault();const scope=e.target.closest?.('.submenu')||this.panel;const list=Array.from(scope.querySelectorAll(':scope > button:not(:disabled)'));let i=list.indexOf(document.activeElement);i=e.key==='Home'?0:e.key==='End'?list.length-1:(i+(e.key==='ArrowDown'?1:-1)+list.length)%list.length;list[i]?.focus();return;}if(['ArrowLeft','ArrowRight'].includes(e.key)&&this.names.includes(this.menuName)){e.preventDefault();const context=this.context;const index=(this.names.indexOf(this.menuName)+(e.key==='ArrowRight'?1:-1)+this.names.length)%this.names.length;this.menuName=null;this.openMenu(this.names[index],this.buttons[index],context);return;}}

@@ -240,12 +240,14 @@
                 this.button('Trash', 'Open Trash', () => this.wm.openApp('trash'), 'sidebar-item').appendTo(sidebar);
                 $('<p class="local-files-note">').text('Files are saved in this browser only. Export important documents for a backup.').appendTo(sidebar);
                 main = $('<div class="finder-body">').appendTo(layout);
-                const nav = $('<div class="finder-navigation">').appendTo(main);
+                const finderToolbar = $('<div class="finder-toolbar">').appendTo(main);
+                const nav = $('<div class="finder-navigation">').appendTo(finderToolbar);
                 [['←', 'back', 'Back'], ['→', 'forward', 'Forward'], ['↑', 'up', 'Enclosing folder']].forEach(([label, id, title]) => this.button(label, title, () => this.commands[id].run()).attr({ 'aria-label': title, 'data-command': id }).appendTo(nav));
                 this.location = $('<span class="finder-location">').appendTo(nav);
                 this.search = $('<input class="finder-search" type="search" placeholder="Search this folder" aria-label="Search this folder">').val(this.query).on('input', e => { this.query = e.target.value; this.selected = null; this.update(); }).appendTo(nav);
-                const actions = $('<div class="finder-actions">').appendTo(main);
-                [['New Folder', 'newFolder'], ['New Text File', 'newText'], ['Open', 'open'], ['Rename', 'rename'], ['Get Info', 'getInfo'], ['Move to Trash', 'trash']].forEach(([label, id]) => this.button(label, null, () => this.commands[id].run()).attr('data-command', id).appendTo(actions));
+                const actions = $('<div class="finder-actions">').appendTo(finderToolbar);
+                [['New Folder', 'newFolder'], ['New Text File', 'newText'], ['Open', 'open'], ['Rename', 'rename'], ['Get Info', 'getInfo'], ['Move to Trash', 'trash']].forEach(([label, id]) => this.button(label, label, () => this.commands[id].run()).attr({ 'data-command': id, 'aria-label': label }).appendTo(actions));
+                this.search.appendTo(finderToolbar);
             }
             this.grid = $('<div class="finder-grid" role="listbox" aria-label="Files" tabindex="0">').toggleClass('desktop-file-grid', this.desktop).appendTo(main);
             this.status = this.desktop ? $() : $('<div class="finder-status workspace-status" role="status">').appendTo(main);
@@ -266,9 +268,7 @@
             if (this.location) this.location.text(this.store.formatPath(this.path)).attr('title', this.store.formatPath(this.path));
             filtered.forEach(item => {
                 const entry = $('<button type="button" class="file-item" role="option">').attr({ 'aria-label': item.name, 'aria-selected': String(this.selected === item.name) }).toggleClass('selected', this.selected === item.name);
-                const icon = $('<span aria-hidden="true" class="file-icon">').addClass(item.type === 'folder' ? 'folder' : 'text').appendTo(entry);
-                // Inline artwork keeps file icons available offline without icon fonts.
-                icon.html(item.type === 'folder' ? '<svg width="46" height="42" viewBox="0 0 46 42"><path fill="#59a7df" d="M3 6h15l5 5h20v26H3z"/><path fill="#85ccff" d="M3 14h40v23H3z"/><path fill="#b8e4ff" d="M3 14h40v3H3z"/></svg>' : '<svg width="40" height="45" viewBox="0 0 40 45"><path fill="#ecf2ff" d="M6 2h18l10 10v31H6z"/><path fill="#a8bedc" d="M24 2v10h10z"/><path stroke="#7996b5" stroke-width="2" d="M12 20h16M12 26h16M12 32h12"/></svg>');
+                $('<span aria-hidden="true" class="file-icon">').addClass(item.type === 'folder' ? 'folder' : 'text').appendTo(entry);
                 $('<span class="file-name">').text(item.name).appendTo(entry);
                 entry.on('click focus', () => { this.selected = item.name; this.activate(); this.updateSelection(); });
                 entry.on('dblclick', () => { this.selected = item.name; this.openSelected(); });
@@ -360,9 +360,10 @@
         }
         render() {
             this.container.empty(); const app = $('<div class="textedit-app">').appendTo(this.container);
-            const toolbar = $('<div class="text-toolbar document-actions">').appendTo(app);
+            const documentToolbar = $('<div class="document-toolbar">').appendTo(app);
+            const toolbar = $('<div class="document-actions">').appendTo(documentToolbar);
             [['New', 'newDocument'], ['Save', 'save'], ['Save As…', 'saveAs'], ['Export .txt', 'export']].forEach(([label, id]) => this.button(label, null, () => this.commands[id].run()).attr('data-command', id).prop('disabled', !this.commands[id].enabled()).appendTo(toolbar));
-            const style = $('<div class="text-toolbar document-style">').appendTo(app);
+            const style = $('<div class="document-style">').appendTo(documentToolbar);
             this.fontSelect = $('<select aria-label="Editor font"><option value="sans-serif">Helvetica</option><option value="monospace">Courier</option><option value="serif">Times</option></select>').val(this.font).on('change', e => { this.font = e.target.value; this.applyStyle(); }).appendTo($('<label>').text('Font ').appendTo(style));
             this.sizeSelect = $('<select aria-label="Editor font size"><option>12</option><option>14</option><option>18</option><option>24</option></select>').val(this.size).on('change', e => { this.size = Number(e.target.value); this.applyStyle(); }).appendTo($('<label>').text('Size ').appendTo(style));
             $('<span class="plain-text-note">').text('Plain text · Display settings only').appendTo(style);
@@ -476,7 +477,7 @@
             const list = $('<div role="listbox" aria-label="Trash items">').appendTo(app);
             if (!items.length) $('<div class="trash-empty">').text('Trash is empty.').appendTo(list);
             items.forEach(item => {
-                const row = $('<div class="trash-row" role="option" tabindex="0">').attr({ 'aria-selected': String(item.id === this.selected), 'aria-label': item.name }).toggleClass('selected', item.id === this.selected).appendTo(list);
+                const row = $('<div class="trash-row" role="option" tabindex="0">').attr({ 'aria-selected': String(item.id === this.selected), 'aria-label': item.name, 'data-file-type': item.node.type }).toggleClass('selected', item.id === this.selected).appendTo(list);
                 row.on('click focus', () => { this.selected = item.id; list.children().removeClass('selected').attr('aria-selected', 'false'); row.addClass('selected').attr('aria-selected', 'true'); this.changed(); });
                 row.on('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); this.selected = item.id; this.restore(); } });
                 const info = $('<div class="trash-info">').appendTo(row); $('<strong>').text(item.name).appendTo(info); $('<small>').text(this.store.formatPath(item.originalPath)).appendTo(info);
@@ -500,23 +501,45 @@
         }
         get cwd() { return this.terminal.cwd; }
         render() {
-            this.container.html('<div class="terminal-app term-output"><div class="term-line">macOS Web Terminal · type help for commands</div><div class="term-line">Commands use browser files only.</div><div class="term-history"></div><div class="term-input-line"><label class="term-prompt"></label><input type="text" class="term-input" aria-label="Terminal command" autocomplete="off" spellcheck="false"></div></div>');
+            this.container.html('<div class="terminal-app term-output"><div class="term-line term-welcome">macOS Web Terminal</div><div class="term-line term-welcome term-hint">Type help for commands. Files stay in this browser.</div><div class="term-history"></div><div class="term-input-line"><label class="term-prompt"></label><textarea rows="1" class="term-input" aria-label="Terminal command" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" wrap="soft"></textarea></div></div>');
             this.historyElement = this.container.find('.term-history'); this.input = this.container.find('.term-input'); this.output = this.container.find('.term-output');
+            const inputId = this.record.id + '-terminal-command'; this.input.attr('id', inputId); this.container.find('.term-prompt').attr('for', inputId);
             this.container.on('click.workspace', e => { if (!$(e.target).is('button') && !global.getSelection().toString()) this.input.trigger('focus'); });
             this.container.on('keydown.workspace', e => { if (e.key === 'Escape' && this.matrixTimer) { e.preventDefault(); e.stopPropagation(); this.stopMatrix(); } });
+            this.input.on('input', () => { this.resizeInput(); this.output.scrollTop(this.output[0].scrollHeight); });
             this.input.on('keydown', async e => {
+                if (e.isComposing || e.originalEvent?.isComposing || e.keyCode === 229) return;
                 if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
                     e.preventDefault(); if (this.historyIndex === this.history.length) this.draft = this.input.val();
                     this.historyIndex = Math.max(0, Math.min(this.history.length, this.historyIndex + (e.key === 'ArrowUp' ? -1 : 1)));
-                    this.input.val(this.historyIndex === this.history.length ? this.draft : this.history[this.historyIndex]); return;
+                    this.input.val(this.historyIndex === this.history.length ? this.draft : this.history[this.historyIndex]);
+                    this.resizeInput(); const end = this.input.val().length; this.input[0].setSelectionRange(end, end);
+                    this.output.scrollTop(this.output[0].scrollHeight); return;
                 }
                 if (e.key !== 'Enter') return;
+                // Submit pasted newlines as one literal command to the safe interpreter.
                 e.preventDefault(); await this.run(this.input.val());
             });
+            if (global.ResizeObserver) {
+                let width = -1;
+                this.inputObserver = new global.ResizeObserver(entries => {
+                    const nextWidth = entries[0].contentRect.width;
+                    if (nextWidth !== width) { width = nextWidth; this.resizeInput(); }
+                });
+                this.inputObserver.observe(this.output[0]);
+            }
             this.updatePrompt();
         }
+        resizeInput() {
+            const input = this.input[0]; input.style.height = 'auto';
+            input.style.height = Math.max(input.scrollHeight, parseFloat(global.getComputedStyle(input).lineHeight) || 18) + 'px';
+        }
         prompt() { return 'guest@macbook ' + this.store.formatPath(this.cwd) + ' %'; }
-        updatePrompt() { this.container.find('.term-prompt').text(this.prompt()); this.title((this.cwd.at(-1) || 'Home') + ' — Terminal'); this.changed(); }
+        updatePrompt() {
+            const prompt = this.container.find('.term-prompt').text(this.prompt().slice(0, -1));
+            $('<span class="term-prompt-symbol">').text('%').appendTo(prompt);
+            this.resizeInput(); this.title((this.cwd.at(-1) || 'Home') + ' — Terminal'); this.changed();
+        }
         line(text) { $('<div class="term-line">').text(text).appendTo(this.historyElement); }
         async run(commandText) {
             this.input.val(''); if (commandText) { this.history.push(commandText); this.historyIndex = this.history.length; this.draft = ''; }
@@ -540,7 +563,7 @@
             if (!same(before, this.cwd)) { if (event.type !== 'rename') this.line('Current folder is no longer available. Moved to ' + this.store.formatPath(this.cwd) + '.'); this.updatePrompt(); }
         }
         snapshot() { return { path: this.cwd.slice() }; }
-        dispose() { super.dispose(); this.stopMatrix(); this.input.off(); }
+        dispose() { super.dispose(); this.stopMatrix(); this.inputObserver?.disconnect(); this.input.off(); }
     }
     global.MacWorkspace = MacWorkspace;
 })(window, window.jQuery);

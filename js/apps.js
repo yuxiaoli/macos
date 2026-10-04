@@ -333,7 +333,11 @@
             button.setAttribute('aria-label', { clear: 'All clear', sign: 'Change sign', percent: 'Percent', '/': 'Divide', '*': 'Multiply', '-': 'Subtract', '+': 'Add', '=': 'Equals', '.': 'Decimal point' }[key[1]] || key[0]);
             grid.appendChild(button);
         });
-        function render() { display.textContent = model.display; display.title = model.error ? 'Cannot calculate this result. Press AC or enter a number.' : model.display; }
+        function render() {
+            display.textContent = model.display;
+            display.style.setProperty('--display-characters', String(Math.max(1, model.display.length)));
+            display.title = model.error ? 'Cannot calculate this result. Press AC or enter a number.' : model.display;
+        }
         function act(key) {
             if (key === 'clear') model.clear();
             else if (key === 'sign') model.sign();
@@ -361,29 +365,29 @@
     function createSafari(container, services) {
         var app = application(container, services), history = new SafariHistory(), loadTimer = null;
         container.innerHTML = '<section class="mac-safari" aria-label="Safari">' +
-            '<div class="safari-toolbar"><button type="button" data-app-command="back" title="Back" aria-label="Back">←</button>' +
-            '<button type="button" data-app-command="forward" title="Forward" aria-label="Forward">→</button>' +
-            '<button type="button" data-app-command="home" title="Home">Home</button>' +
-            '<button type="button" data-app-command="reload" title="Reload" aria-label="Reload">↻</button>' +
+            '<div class="safari-toolbar"><button type="button" class="app-toolbar-icon" data-app-command="back" title="Back" aria-label="Back"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12 4-6 6 6 6"/></svg></button>' +
+            '<button type="button" class="app-toolbar-icon" data-app-command="forward" title="Forward" aria-label="Forward"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m8 4 6 6-6 6"/></svg></button>' +
+            '<button type="button" class="app-toolbar-icon" data-app-command="home" title="Home" aria-label="Home"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m3 9 7-6 7 6M5 8v9h10V8M8 17v-6h4v6"/></svg></button>' +
+            '<button type="button" class="app-toolbar-icon" data-app-command="reload" title="Reload" aria-label="Reload"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16 8a6 6 0 1 0-.5 5M16 3v5h-5"/></svg></button>' +
             '<form class="safari-address-form"><input class="safari-address-input" type="text" inputmode="url" spellcheck="false" autocomplete="off" aria-label="Website address">' +
             '<button type="submit" title="Go to address">Go</button></form>' +
-            '<a class="safari-external" target="_blank" rel="noopener noreferrer" title="Open the address-bar page in a new browser tab">Open Externally ↗</a></div>' +
+            '<a class="safari-external" target="_blank" rel="noopener noreferrer" title="Open the address-bar page in a new browser tab">Open Externally<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M11 3h6v6M17 3l-9 9M8 4H4v12h12v-4"/></svg></a></div>' +
             '<p class="safari-status" role="status" aria-live="polite"></p>' +
             '<iframe class="safari-webview" title="Embedded website" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>' +
-            '<p class="safari-limitations">Some sites block embedding. If the view is blank, use Open Externally. History and the address bar track navigation made here, not links followed inside a website.</p></section>';
+            '<details class="safari-limitations"><summary>About embedded browsing</summary><p>Some sites block embedding. If the view is blank, use Open Externally. History and the address bar track navigation made here, not links followed inside a website.</p></details></section>';
         var input = container.querySelector('input'), frame = container.querySelector('iframe');
         var status = container.querySelector('.safari-status'), external = container.querySelector('.safari-external');
         function load() {
             if (app.disposed()) return false;
             app.window.clearTimeout(loadTimer);
             input.value = history.current(); external.href = history.current();
-            status.textContent = 'Requesting an embedded view… Use Open Externally if the site does not appear.';
+            status.textContent = 'Loading embedded view… Open Externally if the site does not appear.';
             frame.setAttribute('aria-busy', 'true');
             frame.src = history.current();
             syncButtons(container, commands);
             loadTimer = app.window.setTimeout(function () {
                 if (app.disposed()) return;
-                status.textContent = 'The embedded view could not be verified. The website may block embedding; try Open Externally.';
+                status.textContent = 'Embedded view could not be verified. Try Open Externally.';
                 frame.setAttribute('aria-busy', 'false');
             }, 10000);
             return true;
@@ -405,7 +409,7 @@
         app.listen(frame, 'load', function () {
             app.window.clearTimeout(loadTimer);
             frame.setAttribute('aria-busy', 'false');
-            status.textContent = 'Embedded navigation ended. Browsers cannot confirm whether this page is displayed; use Open Externally if blank.';
+            status.textContent = 'Browsers cannot confirm embedded content. Open Externally if the view is blank.';
         });
         app.listen(frame, 'error', function () {
             app.window.clearTimeout(loadTimer);
@@ -426,7 +430,7 @@
         container.innerHTML = '<section class="mac-sketch" aria-label="Sketch">' +
             '<div class="sketch-toolbar"><label>Color <input type="color" class="sketch-color" value="#18283f" aria-label="Brush color"></label>' +
             '<label>Size <input type="range" class="sketch-size" min="1" max="48" value="5" aria-label="Brush size"></label>' +
-            '<button type="button" data-app-command="undo" aria-label="Undo">↶</button><button type="button" data-app-command="redo" aria-label="Redo">↷</button>' +
+            '<button type="button" class="app-toolbar-icon" data-app-command="undo" title="Undo" aria-label="Undo"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7 4-4 4 4 4M3 8h8a4 4 0 0 1 0 8H9"/></svg></button><button type="button" class="app-toolbar-icon" data-app-command="redo" title="Redo" aria-label="Redo"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m13 4 4 4-4 4M17 8H9a4 4 0 0 0 0 8h2"/></svg></button>' +
             '<button type="button" data-app-command="clear">Clear</button><button type="button" data-app-command="importPNG">Import PNG</button>' +
             '<button type="button" data-app-command="exportPNG">Export PNG</button></div>' +
             '<div class="sketch-viewport"><canvas width="1024" height="768" tabindex="0" aria-label="Drawing canvas, 1024 by 768 pixels">Your browser does not support drawing.</canvas></div>' +

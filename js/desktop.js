@@ -5,14 +5,14 @@
     const SESSION_KEY = 'macos.web.session.v1';
     const defaults = { appearance: 'dark', wallpaper: 'monterey', dockAutoHide: false, reducedMotion: false, clock24: false };
     const APPS = [
-        { id: 'finder', name: 'Finder', width: 800, height: 510, multi: true },
-        { id: 'safari', name: 'Safari', width: 930, height: 620 },
-        { id: 'terminal', name: 'Terminal', width: 730, height: 470, multi: true },
-        { id: 'textedit', name: 'TextEdit', width: 690, height: 530, multi: true },
-        { id: 'sketch', name: 'Sketch', width: 850, height: 600 },
-        { id: 'calculator', name: 'Calculator', width: 310, height: 410 },
-        { id: 'settings', name: 'System Settings', width: 680, height: 510 },
-        { id: 'trash', name: 'Trash', width: 690, height: 460, separator: true }
+        { id: 'finder', name: 'Finder', width: 760, height: 480, multi: true },
+        { id: 'safari', name: 'Safari', width: 760, height: 500 },
+        { id: 'terminal', name: 'Terminal', width: 600, height: 400, multi: true },
+        { id: 'textedit', name: 'TextEdit', width: 640, height: 460, multi: true },
+        { id: 'sketch', name: 'Sketch', width: 700, height: 500 },
+        { id: 'calculator', name: 'Calculator', width: 280, height: 350 },
+        { id: 'settings', name: 'System Settings', width: 560, height: 490 },
+        { id: 'trash', name: 'Trash', width: 600, height: 400, separator: true }
     ];
     const alias = id => ({ paint: 'sketch', calc: 'calculator' }[String(id).toLowerCase()] || String(id).toLowerCase());
     const el = (tag, className, text) => {
@@ -290,7 +290,7 @@
             record.element.style.zIndex = String(100 + this.clock);
             if (focusContent && !record.element.contains(document.activeElement)) {
                 if (record.controller?.focus) record.controller.focus();
-                else (record.content.querySelector('.mac-calculator, .text-area, .term-input, .finder-search') || record.content).focus({ preventScroll: true });
+                else (record.content.querySelector('.mac-calculator, .text-area, .term-input, .finder-grid') || record.content).focus({ preventScroll: true });
             }
             this.emit();
         }
@@ -534,7 +534,7 @@
                 selectRow('Appearance', 'appearance', [['dark', 'Dark'], ['light', 'Light'], ['system', 'Follow system']]);
                 [['Automatically hide the Dock', 'dockAutoHide'], ['Reduce motion', 'reducedMotion'], ['Use a 24-hour clock', 'clock24']].forEach(([label, key]) => {
                     const row = el('label', 'settings-row'); row.append(el('span', '', label));
-                    const input = el('input', 'setting-switch'); input.type = 'checkbox'; input.checked = this.settings[key]; input.dataset.setting = key;
+                    const input = el('input', 'setting-switch'); input.type = 'checkbox'; input.setAttribute('role', 'switch'); input.checked = this.settings[key]; input.dataset.setting = key;
                     input.addEventListener('change', () => this.updateSettings({ [key]: input.checked }));
                     row.append(input); group.append(row);
                 });

@@ -1,1 +1,103 @@
-#menubar button{border:0;color:inherit;background:transparent;font:inherit;border-radius:5px;padding:4px 7px;white-space:nowrap}#menubar button:hover,#menubar button[aria-expanded=true]{background:rgba(128,128,128,.35)}#active-app-name{font-weight:700!important}.menu-panel{position:fixed;z-index:12000;padding:7px;min-width:245px;max-width:min(420px,calc(100vw - 16px));max-height:calc(100vh - 65px);overflow:auto;color:var(--text-color,#fff);background:var(--window-bg,rgba(35,35,40,.96));backdrop-filter:blur(30px);border:1px solid #8885;border-radius:9px;box-shadow:0 15px 45px #0007;font:13px -apple-system,BlinkMacSystemFont,sans-serif}.menu-panel button{display:block;width:100%;padding:7px 11px;text-align:left;background:transparent;border:0;color:inherit;font:inherit;border-radius:5px;cursor:pointer}.menu-panel button:hover:not(:disabled),.menu-panel button:focus-visible{background:#1479e5;color:white;outline:0}.menu-panel button:disabled{opacity:.38;cursor:default}.menu-panel h2{font-size:15px;margin:8px}.menu-panel p{line-height:1.5;margin:10px}.submenu{padding:8px;margin:4px 0 4px 18px;border-left:2px solid #8886}.status-panel{width:325px}.status-panel label{display:flex;gap:9px;padding:10px;align-items:center}.calendar-nav{display:flex;align-items:center;gap:5px}.calendar-nav button{width:36px;font-size:0;flex-shrink:0}.calendar-nav button:first-child:after{content:'‹';font-size:22px}.calendar-nav button:last-child:after{content:'›';font-size:22px}.calendar-nav strong{flex:1;text-align:center}.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;gap:4px;padding:8px}.calendar-grid span,.calendar-grid b{padding:6px}.calendar-grid .today{background:#1479e5;color:white;border-radius:50%}.spotlight{width:600px;max-width:calc(100vw - 16px);padding:14px}.spotlight>input{box-sizing:border-box;width:100%;padding:15px;background:transparent;border:0;border-bottom:1px solid #8888;color:inherit;font:21px -apple-system,sans-serif;outline:0;user-select:text}.spotlight-results{max-height:55vh;overflow:auto;margin-top:10px}.spotlight-results button{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}@media(max-width:760px){#menubar{padding:0 3px!important}.menu-left,.menu-right{gap:0!important}#menubar button{padding:5px 3px;font-size:11px}.menu-right [data-status=battery],.menu-right [data-status=network]{max-width:22px;overflow:hidden}}
+/* System menus use the same compact material, spacing and selection treatment. */
+#menubar button {
+    height: 26px;
+    border: 0;
+    border-radius: 4px;
+    padding: 3px 9px;
+    color: inherit;
+    background: transparent;
+    font: 13px/20px var(--system-font);
+    white-space: nowrap;
+    cursor: default;
+}
+#menubar button:hover, #menubar button[aria-expanded='true'] { background: #ffffff26; }
+#menubar button:focus-visible { outline-offset: -2px; }
+#active-app-name { font-weight: 600 !important; }
+.menu-panel, .dock-menu, .workspace-menu {
+    position: fixed;
+    padding: 5px;
+    color: var(--text-color);
+    background: var(--menu-material);
+    backdrop-filter: blur(28px) saturate(1.2);
+    -webkit-backdrop-filter: blur(28px) saturate(1.2);
+    border: 1px solid #ffffff2b;
+    border-radius: 7px;
+    box-shadow: 0 10px 28px #0005, 0 1px 4px #0003, inset 0 1px #ffffff09;
+    font: 13px/18px var(--system-font);
+}
+.desktop-menu { transform: translateY(-3px); }
+.menu-panel {
+    z-index: 12000;
+    min-width: 216px;
+    max-width: min(420px, calc(100vw - 16px));
+    max-height: calc(100vh - 65px);
+    overflow: auto;
+}
+:root[data-appearance='light'] .menu-panel,
+:root[data-appearance='light'] .dock-menu,
+:root[data-appearance='light'] .workspace-menu { border-color: #00000024; box-shadow: 0 10px 28px #0003, 0 1px 4px #0002, inset 0 1px #ffffffb3; }
+.menu-panel button, .dock-menu button, .workspace-menu .workspace-button {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 26px;
+    width: 100%;
+    min-height: 23px;
+    padding: 2px 10px 3px 22px;
+    text-align: left;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    border-radius: 4px;
+    font: inherit;
+    cursor: default;
+}
+.menu-panel button:hover:not(:disabled), .menu-panel button:focus-visible, .menu-panel button[aria-expanded='true'],
+.dock-menu button:hover:not(:disabled), .dock-menu button:focus-visible,
+.workspace-menu .workspace-button:hover:not(:disabled), .workspace-menu .workspace-button:focus-visible {
+    background: var(--accent);
+    color: #fff;
+    outline: 0;
+}
+.menu-panel button:disabled, .workspace-menu .workspace-button:disabled { opacity: .38; cursor: default; }
+.menu-command-label { flex: 1; white-space: nowrap; }
+.menu-command-key { margin-left: auto; color: inherit; opacity: .62; font-size: 12px; letter-spacing: .2px; white-space: nowrap; }
+.menu-panel button:hover .menu-command-key, .menu-panel button:focus-visible .menu-command-key { opacity: 1; }
+.menu-panel button[aria-checked='true']::before { content: '✓'; position: absolute; left: 6px; font-size: 12px; font-weight: 600; }
+.menu-panel button[aria-haspopup='menu']::after { content: ''; width: 5px; height: 5px; border-top: 1.5px solid currentColor; border-right: 1.5px solid currentColor; transform: rotate(45deg); margin-left: auto; margin-right: 2px; }
+.menu-separator { height: 1px; margin: 5px 8px; background: var(--border); }
+.menu-panel h2 { margin: 6px 9px 10px; font-size: 13px; font-weight: 600; }
+.menu-panel p { margin: 9px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.submenu { z-index: 12001; min-width: 160px; max-width: min(240px, calc(100vw - 16px)); margin: 0; }
+.status-panel { width: 300px; padding: 12px; border-radius: 11px; }
+.status-panel > button { min-height: 28px; padding-left: 10px; }
+.status-panel label { display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 6px 10px; font-size: 12px; }
+.status-panel input[type='checkbox'] { width: 14px; height: 14px; margin: 0; accent-color: var(--accent); }
+.status-panel label:first-of-type { border-top: 1px solid var(--border); margin-top: 7px; padding-top: 12px; }
+.status-panel label:last-of-type { border-bottom: 1px solid var(--border); margin-bottom: 6px; padding-bottom: 12px; }
+.calendar-nav { display: flex; align-items: center; gap: 5px; margin-top: 12px; }
+.calendar-nav button { width: 27px; height: 27px; padding: 0; justify-content: center; font-size: 0; flex-shrink: 0; }
+.calendar-nav button:first-child::after { content: '‹'; font-size: 21px; line-height: 1; }
+.calendar-nav button:last-child::after { content: '›'; font-size: 21px; line-height: 1; }
+.calendar-nav strong { flex: 1; text-align: center; font-size: 13px; font-weight: 600; }
+.calendar > button { width: auto; min-height: 22px; padding: 2px 7px; margin: 4px auto; color: var(--muted); font-size: 11px; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; padding: 6px 3px; text-align: center; }
+.calendar-grid span, .calendar-grid b { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; justify-self: center; font-size: 12px; }
+.calendar-grid b { color: var(--muted); font-size: 10px; font-weight: 500; }
+.calendar-grid .today { background: var(--accent); color: #fff; border-radius: 50%; }
+.spotlight { top: clamp(72px, 20vh, 180px) !important; width: 600px; max-width: calc(100vw - 16px); max-height: calc(100vh - clamp(72px, 20vh, 180px) - 24px); padding: 0; border-radius: 12px; }
+.spotlight::before { content: ''; position: absolute; top: 21px; left: 20px; width: 21px; height: 21px; background: currentColor; opacity: .65; mask: url('../assets/icons/menu-search.svg') center / contain no-repeat; -webkit-mask: url('../assets/icons/menu-search.svg') center / contain no-repeat; pointer-events: none; }
+.spotlight > input { box-sizing: border-box; width: 100%; height: 64px; padding: 14px 20px 14px 55px; color: inherit; background: transparent; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; font: 23px var(--system-font); font-weight: 400; outline: 0; user-select: text; }
+.spotlight > input::placeholder { color: var(--muted); opacity: 1; }
+.spotlight > input:focus-visible { outline: 0; }
+.spotlight-results { max-height: 55vh; overflow: auto; padding: 6px; }
+.spotlight-results button { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; padding: 5px 12px; min-height: 29px; }
+@media (max-width: 760px) {
+    #menubar { padding: 0 4px; }
+    .menu-left, .menu-right { gap: 0; }
+    #menubar button { padding-left: 6px; padding-right: 6px; font-size: 12px; }
+}
+@media (max-width: 560px) {
+    #menubar button { padding-left: 5px; padding-right: 5px; font-size: 11px; }
+    .spotlight > input { font-size: 19px; }
+}
