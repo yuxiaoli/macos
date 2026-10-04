@@ -13,6 +13,10 @@
 <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
 <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
 
+<script src="js/file-store.js"></script>
+<script src="js/terminal.js"></script>
+<script src="js/workspace.js"></script>
+
 <style>
     :root {
         --bg-peal: rgba(255, 255, 255, 0.1); /* non-blurred fallback */
@@ -275,6 +279,7 @@
     .icon-trash::after { content: '\f1f8'; font-family: 'Font Awesome 6 Free'; font-weight: 900; color: #777; font-size: 30px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
 
 </style>
+<link rel="stylesheet" href="css/workspace.css">
 </head>
 <body>
 
@@ -292,7 +297,7 @@
             <div class="menu-left">
                 <div class="menu-item"><i class="fab fa-apple apple-icon"></i></div>
                 <div class="menu-item" id="active-app-name">Finder</div>
-                <div class="menu-item">File</div>
+                <button type="button" class="menu-item menu-button" id="file-menu-button" aria-haspopup="menu" aria-expanded="false">File</button>
                 <div class="menu-item">Edit</div>
                 <div class="menu-item">View</div>
                 <div class="menu-item">Go</div>
@@ -313,7 +318,7 @@
 
         <!-- Context Menu -->
         <div id="context-menu">
-            <div class="ctx-item" onclick="wm.openApp('finder')">New Folder</div>
+            <div class="ctx-item" onclick="workspace.navigate(['Desktop']); workspace.createItem('folder', ['Desktop'])">New Folder</div>
             <div class="ctx-hr"></div>
             <div class="ctx-item">Get Info</div>
             <div class="ctx-item" onclick="wm.openApp('settings')">Change Wallpaper...</div>
@@ -343,21 +348,6 @@
         { id: 'trash', name: 'Bin', iconClass: 'icon-trash', separator: true }
     ];
 
-    // Simulated File System
-    const fileSystem = {
-        'Desktop': { type: 'folder', children: {
-            'Welcome.txt': { type: 'text', content: 'Welcome to macOS Web Edition!\nThis is a simulation built in a single HTML file.'},
-            'Project': { type: 'folder', children: {} }
-        }},
-        'Documents': { type: 'folder', children: {
-            'notes.txt': { type: 'text', content: 'Buy milk\nFinish code'}
-        }},
-        'Downloads': { type: 'folder', children: {
-            'image.jpg': { type: 'img', src: ''}
-        }}
-    };
-    let currentPath = ['Desktop'];
-
     // --- Window Manager Class ---
     class WindowManager {
         constructor() {
@@ -375,10 +365,10 @@
                 
                 let iconHtml = app.htmlIcon ? app.htmlIcon : '';
                 let el = $(`
-                    <div class="dock-item" id="dock-${app.id}" title="${app.name}">
+                    <button type="button" class="dock-item" id="dock-${app.id}" title="${app.name}" aria-label="${app.name}">
                         <div class="dock-icon-svg ${app.iconClass}">${iconHtml}</div>
                         <div class="dock-dot"></div>
-                    </div>
+                    </button>
                 `);
                 el.on('click', () => this.openApp(app.id));
                 dock.append(el);
@@ -414,7 +404,7 @@
             const dockItem = $(`#dock-${appId}`);
             if(!dockItem.hasClass('active') && !dockItem.hasClass('bouncing')) {
                 dockItem.addClass('bouncing');
-                setTimeout(() => dockItem.removeClass('bouncing').addClass('active'), 600);
+                setTimeout(() => dockItem.removeClass('bouncing').toggleClass('active', Boolean(this.windows[appId])), 600);
             }
 
             // Check if already open
@@ -438,18 +428,22 @@
             if(id === 'calculator') { w = 250; h = 350; }
             if(id === 'paint' || id === 'studio') { w = 700; h = 500; }
             if(id === 'settings') { w = 500; h = 300; }
+            if(id === 'finder') { w = 760; h = 480; }
+            if(id === 'textedit') { w = 640; h = 460; }
+            w = Math.min(w, Math.max(300, window.innerWidth - 24));
+            h = Math.min(h, Math.max(200, window.innerHeight - 130));
 
             // Random position placement
-            const top = 50 + (Object.keys(this.windows).length * 20);
-            const left = 50 + (Object.keys(this.windows).length * 20);
+            const top = Math.min(50 + Object.keys(this.windows).length * 20, Math.max(32, window.innerHeight - h - 85));
+            const left = Math.min(50 + Object.keys(this.windows).length * 20, Math.max(0, window.innerWidth - w - 12));
 
             const winHTML = `
                 <div class="window opening" id="win-${id}" style="width:${w}px; height:${h}px; top:${top}px; left:${left}px; z-index:${++this.zIndexCounter}">
                     <div class="window-header">
                         <div class="traffic-lights">
-                            <div class="t-btn close-btn"><i class="fas fa-times"></i></div>
-                            <div class="t-btn min-btn"><i class="fas fa-minus"></i></div>
-                            <div class="t-btn max-btn"><i class="fas fa-plus"></i></div>
+                            <button type="button" class="t-btn close-btn" aria-label="Close ${config.name}"><i class="fas fa-times" aria-hidden="true"></i></button>
+                            <button type="button" class="t-btn min-btn" aria-label="Minimize ${config.name}"><i class="fas fa-minus" aria-hidden="true"></i></button>
+                            <button type="button" class="t-btn max-btn" aria-label="Maximize ${config.name}"><i class="fas fa-plus" aria-hidden="true"></i></button>
                         </div>
                         <div class="window-title">${config.name}</div>
                     </div>
@@ -463,7 +457,7 @@
             // Make interactive
             $win.draggable({ handle: '.window-header', containment: '#desktop', start: () => this.setActiveWindow(id) })
                 .resizable({ minHeight: 200, minWidth: 250, stop: ()=> { if(id==='paint') resizeCanvas(); }})
-                .on('mousedown', () => this.setActiveWindow(id));
+                .on('mousedown focusin', () => this.setActiveWindow(id));
 
             // Window button events
             $win.find('.close-btn').on('click', (e) => { e.stopPropagation(); this.closeWindow(id); });
@@ -477,11 +471,20 @@
             this.loadAppContent(id);
         }
 
-        closeWindow(id) {
-            $(`#win-${id}`).fadeOut(150, function() { $(this).remove(); });
-            delete this.windows[id];
-            $(`#dock-${id}`).removeClass('active');
-            this.updateMenubar('Finder');
+        async closeWindow(id) {
+            if (!this.windows[id] || this.closing === id) return;
+            this.closing = id;
+            try {
+                if (id === 'textedit' && !await workspace.canCloseEditor()) return;
+                if (id === 'textedit') workspace.editorClosed();
+                if (id === 'terminal' && workspace.terminalCleanup) workspace.terminalCleanup();
+                $(`#win-${id}`).remove();
+                delete this.windows[id];
+                $(`#dock-${id}`).removeClass('active bouncing');
+                const remaining = Object.keys(this.windows).filter(key => $(`#win-${key}`).is(':visible'));
+                if (remaining.length) this.setActiveWindow(remaining.at(-1));
+                else this.updateMenubar('Finder');
+            } finally { this.closing = null; }
         }
 
         minimizeWindow(id) {
@@ -517,160 +520,24 @@
                 case 'safari': renderSafari(container); break;
                 case 'studio': renderStudio(container); break;
                 case 'settings': renderSettings(container); break;
-                case 'trash': container.html('<div style="padding:20px; text-align:center; color:#aaa;">Trash is empty.<br><i class="fas fa-trash fa-3x" style="margin-top:20px;"></i></div>'); break;
+                case 'trash': workspace.renderTrash(container); break;
             }
         }
     }
 
     const wm = new WindowManager();
+    let browserStorage;
+    try { browserStorage = window.localStorage; } catch (_) { browserStorage = null; }
+    const fileStore = new MacFileStore(browserStorage);
+    const workspace = new MacWorkspace(fileStore, wm);
 
     // --- App Implementations ---
 
-    // 1. FINDER
-    function renderFinder(container) {
-        container.html(`
-            <div class="finder-layout">
-                <div class="finder-sidebar">
-                    <div style="font-size:10px; color:#888; padding-left:10px; margin-top:10px;">Favorites</div>
-                    <div class="sidebar-item" onclick="navFinder(['Desktop'])"><i class="fas fa-desktop"></i> Desktop</div>
-                    <div class="sidebar-item" onclick="navFinder(['Documents'])"><i class="fas fa-file-alt"></i> Documents</div>
-                    <div class="sidebar-item" onclick="navFinder(['Downloads'])"><i class="fas fa-download"></i> Downloads</div>
-                </div>
-                <div class="finder-main">
-                    <div style="margin-bottom:10px; color:#888; font-size:12px;"><i class="fas fa-chevron-left"></i> <i class="fas fa-chevron-right"></i> &nbsp; ${currentPath.join(' > ')}</div>
-                    <div class="finder-grid" id="finder-grid"></div>
-                </div>
-            </div>
-        `);
-        updateFinderGrid();
-    }
-
-    window.navFinder = function(path) {
-        currentPath = path;
-        renderFinder($('#content-finder'));
-    }
-
-    function updateFinderGrid() {
-        const grid = $('#finder-grid');
-        grid.empty();
-        
-        let target = fileSystem;
-        currentPath.forEach(p => target = target[p] ? target[p].children : target);
-
-        if(!target) return;
-
-        Object.keys(target).forEach(key => {
-            const item = target[key];
-            let icon = 'fa-folder folder';
-            if(item.type === 'text') icon = 'fa-file-alt text';
-            if(item.type === 'img') icon = 'fa-file-image img';
-
-            const el = $(`
-                <div class="file-item">
-                    <i class="fas ${icon} file-icon"></i>
-                    <div class="file-name">${key}</div>
-                </div>
-            `);
-            
-            el.on('dblclick', () => {
-                if(item.type === 'folder') {
-                    currentPath.push(key);
-                    renderFinder($('#content-finder'));
-                } else if (item.type === 'text') {
-                    wm.openApp('textedit');
-                    setTimeout(() => $('#text-area').val(item.content), 200);
-                }
-            });
-            grid.append(el);
-        });
-    }
-
-    // 2. TERMINAL
-    function renderTerminal(container) {
-        container.html(`
-            <div class="terminal-app" id="term-output">
-                <div class="term-line">Last login: ${new Date().toLocaleString()} on ttys000</div>
-                <div class="term-line">macOS Web Edition [Version 1.0]</div>
-                <br>
-                <div id="term-history"></div>
-                <div class="term-input-line">
-                    <span class="term-prompt">guest@macbook ~ %</span>
-                    <input type="text" id="term-input" autocomplete="off" autofocus>
-                </div>
-            </div>
-        `);
-        
-        const history = $('#term-history');
-        const input = $('#term-input');
-        const output = $('#term-output');
-
-        container.on('click', () => input.focus());
-
-        input.on('keydown', function(e) {
-            if(e.key === 'Enter') {
-                const cmd = this.value.trim();
-                history.append(`<div class="term-line"><span class="term-prompt">guest@macbook ~ %</span> ${cmd}</div>`);
-                this.value = '';
-                processCommand(cmd);
-                output.scrollTop(output[0].scrollHeight);
-            }
-        });
-
-        function processCommand(cmd) {
-            const args = cmd.split(' ');
-            let response = '';
-            switch(args[0].toLowerCase()) {
-                case 'help': response = 'Available commands: help, clear, ls, whoami, date, echo, matrix'; break;
-                case 'clear': history.empty(); return;
-                case 'ls': response = 'Desktop  Documents  Downloads  Music  Pictures'; break;
-                case 'whoami': response = 'guest'; break;
-                case 'date': response = new Date().toString(); break;
-                case 'echo': response = args.slice(1).join(' '); break;
-                case 'sudo': response = 'Password: 🔑 (Just kidding, you have no power here)'; break;
-                case 'matrix': startMatrix(); return;
-                case '': return;
-                default: response = `zsh: command not found: ${args[0]}`;
-            }
-            history.append(`<div class="term-line">${response}</div>`);
-        }
-
-        function startMatrix() {
-            $('.terminal-app').css({'color':'#0f0', 'background':'black'}).html('<canvas id="matrix" style="position:absolute;top:0;left:0;"></canvas>');
-            // Matrix effect simplified
-            const C = document.getElementById("matrix");
-            const $p =C.parentElement; C.width=$p.clientWidth; C.height=$p.clientHeight;
-            const ctx=C.getContext("2d");
-            const txts = "01"; const msg = txts.split("");
-            const font_size = 10; const columns = C.width/font_size; const drops = [];
-            for(let x=0; x<columns; x++) drops[x]=1;
-            function draw(){
-                ctx.fillStyle="rgba(0, 0, 0, 0.05)"; ctx.fillRect(0,0,C.width,C.height);
-                ctx.fillStyle="#0F0"; ctx.font = font_size + "px monospace";
-                for(let i=0; i<drops.length; i++){
-                    const text = msg[Math.floor(Math.random()*msg.length)];
-                    ctx.fillText(text, i*font_size, drops[i]*font_size);
-                    if(drops[i]*font_size > C.height && Math.random() > 0.975) drops[i]=0;
-                    drops[i]++;
-                }
-            }
-            setInterval(draw, 33);
-        }
-    }
-
-    // 3. TEXTEDIT
-    function renderTextEdit(container) {
-        container.html(`
-            <div class="textedit-app">
-                <div class="text-toolbar">
-                    <select class="text-tool"><option>Helvetica</option><option>Courier</option><option>Times</option></select>
-                    <select class="text-tool"><option>12</option><option>14</option><option>18</option></select>
-                    <button class="text-tool"><i class="fas fa-bold"></i></button>
-                    <button class="text-tool"><i class="fas fa-italic"></i></button>
-                </div>
-                <textarea id="text-area" placeholder="Start typing..."></textarea>
-            </div>
-        `);
-    }
+    // Shared browser files power Finder, TextEdit, Trash, and Terminal.
+    function renderFinder(container) { workspace.renderFinder(container); }
+    function renderTextEdit(container) { workspace.renderTextEdit(container); }
+    function renderTerminal(container) { workspace.renderTerminal(container); }
+    window.navFinder = path => workspace.navigate(path);
 
     // 4. SKETCH (Paint)
     let canvas, ctx, painting = false;
