@@ -212,7 +212,7 @@
         get: function () { return this._readOnly; }
     });
 
-    MacFileStore.prototype._change = function (type, mutate) {
+    MacFileStore.prototype._change = function (type, mutate, details) {
         if (this._readOnly) throw failure(this.storageWarning || 'This filesystem is read-only.', 'EROFS');
         var latest;
         try { latest = this._storage.getItem(STORAGE_KEY); }
@@ -239,9 +239,10 @@
         this._state = candidate;
         this._raw = serialized;
         this.storageWarning = null;
+        var event = Object.assign({ type: type, paths: [] }, typeof details === 'function' ? details(result) : details);
         // An observer failure must never turn a successful save into a reported failure.
         Array.from(this._listeners).forEach(function (listener) {
-            try { listener({ type: type }); } catch (error) { /* The committed state is already safe. */ }
+            try { listener(copy(event)); } catch (error) { /* The committed state is already safe. */ }
         });
         return result;
     };
@@ -277,7 +278,7 @@
             if (hasOwn(parent.children, name)) throw failure('A file or folder with that name already exists.', 'EEXIST');
             parent.children[name] = type === 'folder' ? folder() : { type: 'text', content: content };
             return path;
-        });
+        }, { paths: [path], path: path });
     };
 
     MacFileStore.prototype.write = function (path, content) {
@@ -288,7 +289,7 @@
             if (node.type !== 'text') throw failure('Only text files can be edited.', 'EISDIR');
             node.content = content;
             return path;
-        });
+        }, { paths: [path], path: path });
     };
 
     MacFileStore.prototype.rename = function (path, newName) {
@@ -306,7 +307,7 @@
                 delete parent.children[oldName];
             }
             return parentPath.concat(newName);
-        });
+        }, function (newPath) { return { paths: [path, newPath], oldPath: path, newPath: newPath }; });
     };
 
     MacFileStore.prototype.trash = function (path) {
@@ -320,7 +321,7 @@
             state.trash.push({ id: id, name: name, originalPath: path, node: node, deletedAt: new Date().toISOString() });
             delete parentFolder(state, path.slice(0, -1)).children[name];
             return id;
-        });
+        }, function (id) { return { paths: [path], path: path, trashId: id }; });
     };
 
     MacFileStore.prototype.listTrash = function () {
@@ -360,7 +361,19 @@
             parent.children[name] = entry.node;
             state.trash.splice(index, 1);
             return parentPath.concat(name);
-        });
+        }, function (path) { return { paths: [path], path: path, trashId: id }; });
+    };
+
+    // Emptying the Bin uses exactly the same validation, stale-tab and atomic-save
+    // boundary as other mutations. UI confirmation belongs to the workspace.
+    MacFileStore.prototype.emptyTrash = function () {
+        var paths = this._state.trash.map(function (entry) { return entry.originalPath.slice(); });
+        var ids = this._state.trash.map(function (entry) { return entry.id; });
+        return this._change('emptyTrash', function (state) {
+            var count = state.trash.length;
+            state.trash = [];
+            return count;
+        }, { paths: paths, trashIds: ids });
     };
 
     MacFileStore.prototype.subscribe = function (listener) {
