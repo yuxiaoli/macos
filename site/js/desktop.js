@@ -31,10 +31,11 @@
     const pathEqual = (a, b) => Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((part, i) => part === b[i]);
 
     class WindowManager {
-        constructor(storage) {
+        constructor(storage, startup = { config: null, warning: null }) {
             this.storage = storage;
+            this.startup = startup;
             this.windows = Object.create(null);
-            this.apps = APPS;
+            this.apps = APPS.filter(app => !startup.config?.apps || Object.prototype.hasOwnProperty.call(startup.config.apps, app.id));
             this.counter = 0;
             this.clock = 0;
             this.activeId = null;
@@ -61,6 +62,7 @@
         get activeWindow() { return this.windows[this.activeId] || null; }
         get activeApp() { return this.activeWindow?.name || 'Finder'; }
         listWindows() { return Object.values(this.windows); }
+        isAppEnabled(appId) { return this.apps.some(app => app.id === alias(appId)); }
         subscribe(listener) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
         emit() {
             this.updateDock();
@@ -109,6 +111,8 @@
             this.emit();
         }
         writeJSON(key, value) {
+            // A shared startup URL must not replace the visitor's normal workspace/preferences.
+            if (this.startup.config) return true;
             try {
                 if (!this.storage) throw new Error('Storage unavailable');
                 this.storage.setItem(key, JSON.stringify(value));
@@ -124,7 +128,7 @@
         initDock() {
             const dock = document.getElementById('dock');
             dock.replaceChildren();
-            APPS.forEach(app => {
+            this.apps.forEach(app => {
                 if (app.separator) dock.append(el('span', 'dock-separator'));
                 const item = button('', 'dock-item', () => this.openApp(app.id));
                 item.id = 'dock-' + app.id;
@@ -149,7 +153,7 @@
             });
         }
         updateDock() {
-            APPS.forEach(app => {
+            this.apps.forEach(app => {
                 const item = document.getElementById('dock-' + app.id);
                 const open = this.listWindows().some(record => record.appId === app.id);
                 item?.classList.toggle('running', open);
@@ -197,9 +201,20 @@
             appId = alias(appId);
             const config = APPS.find(app => app.id === appId);
             if (!config) return null;
-            const path = this.normalizePath(options.path);
-            if (path) options = { ...options, path };
+            if (!this.isAppEnabled(appId)) {
+                this.workspace?.report(config.name + ' is not enabled in this startup configuration.', true);
+                return null;
+            }
+            if (appId === 'safari') options = { ...options, homepage: this.startup.config?.apps?.safari?.homepage || global.MacApps.HOME };
+            let path = this.normalizePath(options.path);
             const existing = this.listWindows().filter(record => record.appId === appId).sort((a, b) => b.lastFocused - a.lastFocused);
+            if (appId === 'textedit' && !path && !options.newWindow && !existing.length) {
+                try {
+                    const notes = ['Documents', 'notes.txt'];
+                    if (this.workspace.store.read(notes).type === 'text') path = notes;
+                } catch (_) { /* Removed starter notes stay removed. */ }
+            }
+            if (path) options = { ...options, path };
             if (appId === 'textedit' && path) {
                 const same = existing.find(record => pathEqual(record.controller?.editor?.path, path));
                 if (same) { this.focusWindow(same.id); return same; }
@@ -546,7 +561,7 @@
                     choice.title = title; choice.setAttribute('aria-label', title + ' wallpaper'); choice.setAttribute('aria-pressed', String(this.settings.wallpaper === value));
                     choice.append(el('span', '', title)); wallpapers.append(choice);
                 });
-                panel.append(wallpapers, el('p', 'settings-local-note', 'Files, preferences, and saved documents stay in this browser. Unsaved text drafts are not restored after leaving.'));
+                panel.append(wallpapers, el('p', 'settings-local-note', this.startup.config ? 'This startup configuration is temporary. Preferences and window layout changes last for this session; saved files and drawings still stay in this browser.' : 'Files, preferences, and saved documents stay in this browser. Unsaved text drafts are not restored after leaving.'));
                 container.replaceChildren(panel);
                 if (focusedSetting) [...container.querySelectorAll('[data-setting]')].find(control => control.dataset.setting === focusedSetting)?.focus();
             };
@@ -578,9 +593,9 @@
             let active = null;
             try {
                 const records = session?.version === 1 && Array.isArray(session.windows) ? session.windows.slice(0, 40) : null;
-                if (!records) { this.openApp('finder', { newWindow: true, path: ['Desktop'] }); return; }
+                if (!records) { if (this.isAppEnabled('finder')) this.openApp('finder', { newWindow: true, path: ['Desktop'] }); return; }
                 for (const saved of records) {
-                    if (!saved || typeof saved !== 'object' || !APPS.some(app => app.id === saved.appId)) continue;
+                    if (!saved || typeof saved !== 'object' || !this.isAppEnabled(saved.appId)) continue;
                     const state = saved.state && typeof saved.state === 'object' && !Array.isArray(saved.state) ? saved.state : {};
                     if (saved.appId === 'textedit' && !Array.isArray(state.path)) continue;
                     if (Array.isArray(state.path)) {
@@ -633,7 +648,8 @@
         if (!document.getElementById('desktop') || global.wm) return;
         let storage;
         try { storage = global.localStorage; } catch (_) { storage = null; }
-        const manager = new WindowManager(storage);
+        const startup = global.MacStartupConfig ? global.MacStartupConfig.parse(global.location.search, APPS.map(app => app.id)) : { config: null, warning: null };
+        const manager = new WindowManager(storage, startup);
         global.wm = manager;
         global.fileStore = new global.MacFileStore(storage);
         const workspace = new global.MacWorkspace(global.fileStore, manager);
@@ -646,6 +662,8 @@
         workspace.createDesktop(document.getElementById('desktop-files'));
         global.menus = new global.MacMenus(manager, workspace, global.fileStore);
         manager.restoreSession(manager.readJSON(SESSION_KEY));
+        if (startup.warning) workspace.report(startup.warning, true);
+        else if (startup.config) workspace.report('Temporary startup configuration active. Preferences and window layout changes will not replace your saved workspace.');
         if (manager.storageWarnings?.length) workspace.report(manager.storageWarnings[0], true);
         document.dispatchEvent(new CustomEvent('desktopready'));
     }

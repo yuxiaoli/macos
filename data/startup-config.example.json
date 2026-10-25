@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "apps": {
+    "finder": {},
+    "safari": {"homepage": "https://vectorindex.cloud"},
+    "textedit": {},
+    "terminal": {},
+    "calculator": {}
+  }
+}

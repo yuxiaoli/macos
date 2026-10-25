@@ -50,6 +50,10 @@ Files and Trash remain in `localStorage` on this browser, device and site origin
 - Settings and workspace use separate versioned keys. Restoration includes window bounds/display state, Finder folders, saved TextEdit documents and Terminal working directories. Unsaved untitled drafts are excluded. Saved documents reopen from their saved contents, not an unsaved buffer. Invalid paths fall back safely or are omitted. Restored Safari windows start at the configured Home.
 - Sketch's latest draft uses its own IndexedDB database and does not consume the virtual text-filesystem quota.
 
+## Configured startup URLs
+
+Share a temporary app selection and nested Safari homepage with the versioned `config` query parameter. See [the startup config contract and examples](docs/STARTUP_CONFIG.md). Only bundled apps are available; URL configuration preserves the normal saved workspace and documents.
+
 ## Local development
 
 With Node.js 20 or newer:

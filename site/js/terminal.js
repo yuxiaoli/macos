@@ -173,7 +173,7 @@
                         this._arity(args, 0, 0, 'matrix');
                         return { output: '', action: 'matrix' };
                     case 'whoami':
-                        return { output: 'guest' };
+                        return { output: 'sean' };
                     case 'date':
                         return { output: new Date().toString() };
                     case 'sudo':

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "macOS Web Desktop startup configuration v1",
+  "description": "Session-only config query parameter. Runtime limits JSON to 8192 UTF-8 bytes and the full query to 32768 characters.",
+  "type": "object",
+  "required": ["version"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {"const": 1},
+    "apps": {
+      "description": "Exact allowlist of enabled bundled apps. Omitted enables all; an empty object enables none. Does not automatically launch apps.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "finder": {"$ref": "#/$defs/noOptions"},
+        "safari": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "homepage": {
+              "type": "string",
+              "maxLength": 2048,
+              "format": "uri",
+              "pattern": "^[hH][tT][tT][pP][sS]?://[^/@\\s\\\\\\u0000-\\u001f\\u007f]+(?:[/?#][^\\s\\\\\\u0000-\\u001f\\u007f]*)?$",
+              "description": "Absolute HTTP(S) URL, valid hostname, no credentials, whitespace, controls or backslashes. Runtime uses URL and a stricter 2048 UTF-16-code-unit limit. Default: https://vectorindex.cloud."
+            }
+          }
+        },
+        "terminal": {"$ref": "#/$defs/noOptions"},
+        "textedit": {"$ref": "#/$defs/noOptions"},
+        "sketch": {"$ref": "#/$defs/noOptions"},
+        "calculator": {"$ref": "#/$defs/noOptions"},
+        "settings": {"$ref": "#/$defs/noOptions"},
+        "trash": {"$ref": "#/$defs/noOptions"}
+      }
+    }
+  },
+  "$defs": {"noOptions": {"type": "object", "additionalProperties": false, "description": "No URL-configurable options in v1."}}
+}

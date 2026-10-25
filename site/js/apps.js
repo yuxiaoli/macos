@@ -169,7 +169,7 @@
         if (url.username || url.password) throw new Error('Addresses containing usernames or passwords are not supported.');
         return url.href;
     }
-    function SafariHistory() { this.entries = [normalizeAddress(HOME)]; this.index = 0; }
+    function SafariHistory(homepage) { this.entries = [normalizeAddress(homepage || HOME)]; this.index = 0; }
     SafariHistory.prototype.current = function () { return this.entries[this.index]; };
     SafariHistory.prototype.navigate = function (address) {
         var next = normalizeAddress(address);
@@ -270,7 +270,7 @@
         options = options || {};
         services = services || {};
         if (appId === 'calculator' || appId === 'calc') return createCalculator(container, options, services);
-        if (appId === 'safari') return createSafari(container, services);
+        if (appId === 'safari') return createSafari(container, services, options);
         if (appId === 'sketch' || appId === 'paint') return createSketch(container, options, services);
         return null;
     }
@@ -362,8 +362,9 @@
         return { commands: commands, beforeClose: async function () { return true; }, snapshot: function () { return { calculator: model.snapshot() }; }, dispose: app.dispose };
     }
 
-    function createSafari(container, services) {
-        var app = application(container, services), history = new SafariHistory(), loadTimer = null;
+    function createSafari(container, services, options) {
+        var homepage = normalizeAddress(options && options.homepage || HOME);
+        var app = application(container, services), history = new SafariHistory(homepage), loadTimer = null;
         container.innerHTML = '<section class="mac-safari" aria-label="Safari">' +
             '<div class="safari-toolbar"><button type="button" class="app-toolbar-icon" data-app-command="back" title="Back" aria-label="Back"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12 4-6 6 6 6"/></svg></button>' +
             '<button type="button" class="app-toolbar-icon" data-app-command="forward" title="Forward" aria-label="Forward"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m8 4 6 6-6 6"/></svg></button>' +
@@ -372,6 +373,7 @@
             '<form class="safari-address-form"><input class="safari-address-input" type="text" inputmode="url" spellcheck="false" autocomplete="off" aria-label="Website address">' +
             '<button type="submit" title="Go to address">Go</button></form>' +
             '<a class="safari-external" target="_blank" rel="noopener noreferrer" title="Open the address-bar page in a new browser tab">Open Externally<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M11 3h6v6M17 3l-9 9M8 4H4v12h12v-4"/></svg></a></div>' +
+            '<nav class="safari-bookmarks" aria-label="Sean\'s saved links"><a href="https://vectorindex.cloud" target="_blank" rel="noopener noreferrer">Vector Index</a><a href="https://github.com/yuxiaoli" target="_blank" rel="noopener noreferrer">Sean on GitHub</a><a href="https://github.com/yuxiaoli/macos" target="_blank" rel="noopener noreferrer">Desktop source</a></nav>' +
             '<p class="safari-status" role="status" aria-live="polite"></p>' +
             '<iframe class="safari-webview" title="Embedded website" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>' +
             '<details class="safari-limitations"><summary>About embedded browsing</summary><p>Some sites block embedding. If the view is blank, use Open Externally. History and the address bar track navigation made here, not links followed inside a website.</p></details></section>';
@@ -396,7 +398,7 @@
         var commands = {
             back: app.command('Back', function () { history.back(); return load(); }, function () { return history.canBack(); }),
             forward: app.command('Forward', function () { history.forward(); return load(); }, function () { return history.canForward(); }),
-            home: app.command('Home', function () { return navigate(HOME); }),
+            home: app.command('Home', function () { return navigate(homepage); }),
             reload: app.command('Reload', load),
             openLocation: app.command('Open Location…', function () { input.focus(); input.select(); }),
             openExternal: app.command('Open Current Page Externally', function () { external.click(); })
@@ -417,7 +419,7 @@
             status.textContent = 'This page could not be embedded. Open it externally to continue.';
         });
         load();
-        return { commands: commands, beforeClose: async function () { return true; }, snapshot: function () { return { url: HOME }; },
+        return { commands: commands, beforeClose: async function () { return true; }, snapshot: function () { return { url: homepage }; },
             dispose: function () { app.window.clearTimeout(loadTimer); app.dispose(); frame.removeAttribute('src'); } };
     }
 

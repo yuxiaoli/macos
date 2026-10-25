@@ -68,7 +68,7 @@ test('exports a browser global as well as a CommonJS constructor', () => {
     const context = vm.createContext({});
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../site/js/terminal.js'), 'utf8'), context);
     assert.equal(typeof context.MacTerminal, 'function');
-    assert.equal(new context.MacTerminal(mockStore()).run('whoami').output, 'guest');
+    assert.equal(new context.MacTerminal(mockStore()).run('whoami').output, 'sean');
 });
 
 test('lists the actual current folder and individual files', () => {
@@ -225,8 +225,8 @@ test('preserves utility commands and reports unknown commands', () => {
     const { terminal } = fixture();
     assert.match(terminal.run('help').output, /ls \[path\]/);
     assert.match(terminal.run('help').output, /echo text >> file/);
-    assert.equal(terminal.run('whoami').output, 'guest');
-    assert.equal(terminal.run('WHOAMI').output, 'guest');
+    assert.equal(terminal.run('whoami').output, 'sean');
+    assert.equal(terminal.run('WHOAMI').output, 'sean');
     assert.equal(Number.isNaN(Date.parse(terminal.run('date').output)), false);
     assert.match(terminal.run('sudo anything').output, /you have no power here/);
     assert.deepEqual(terminal.run('clear'), { output: '', action: 'clear' });

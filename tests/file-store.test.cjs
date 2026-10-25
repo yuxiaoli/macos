@@ -52,7 +52,7 @@ test('first run seeds and persists three home folders and usable text samples', 
     assert.equal(store.read([]).name, '/');
     assert.equal(store.read(['Desktop', 'Project']).type, 'folder');
     assert.match(store.read(['Desktop', 'Welcome.txt']).content, /Welcome/);
-    assert.equal(store.read(['Documents', 'notes.txt']).content, 'Buy milk\nFinish code');
+    assert.equal(store.read(['Documents', 'notes.txt']).content, 'Make the next useful thing.\n\nStart with a question. Build a small answer. Leave it better than you found it.\n\nA note from Sean / Vector Index\nhttps://vectorindex.cloud\n\nYour next idea:\n');
     assert.equal(store.read(['Downloads', 'Readme.txt']).type, 'text');
     assert.throws(() => store.read(['Downloads', 'image.jpg']), code('ENOENT'));
     const loaded = new MacFileStore(storage);
@@ -66,7 +66,7 @@ test('UMD exports the constructor in a browser and uses localStorage by default'
     vm.runInNewContext(fs.readFileSync(require.resolve('../site/js/file-store.js'), 'utf8'), sandbox);
     assert.equal(typeof sandbox.MacFileStore, 'function');
     const store = new sandbox.MacFileStore();
-    assert.equal(store.read(['Documents', 'notes.txt']).content, 'Buy milk\nFinish code');
+    assert.equal(store.read(['Documents', 'notes.txt']).content, 'Make the next useful thing.\n\nStart with a question. Build a small answer. Leave it better than you found it.\n\nA note from Sean / Vector Index\nhttps://vectorindex.cloud\n\nYour next idea:\n');
     assert.ok(storage.raw());
 });
 
@@ -107,7 +107,7 @@ test('read, list, returned paths and Bin entries are defensive copies', () => {
     root.children.Documents.children['notes.txt'].content = 'mutated';
     const listed = store.list(['Documents']);
     listed[0].content = 'mutated';
-    assert.equal(store.read(['Documents', 'notes.txt']).content, 'Buy milk\nFinish code');
+    assert.equal(store.read(['Documents', 'notes.txt']).content, 'Make the next useful thing.\n\nStart with a question. Build a small answer. Leave it better than you found it.\n\nA note from Sean / Vector Index\nhttps://vectorindex.cloud\n\nYour next idea:\n');
     const path = store.create(['Documents'], 'new.txt');
     path[0] = 'Downloads';
     assert.equal(store.read(['Documents', 'new.txt']).type, 'text');
@@ -119,7 +119,7 @@ test('read, list, returned paths and Bin entries are defensive copies', () => {
     trash[0].originalPath[0] = 'Downloads';
     trash.push({});
     assert.deepEqual(store.restore(id), ['Documents', 'notes.txt']);
-    assert.equal(store.read(['Documents', 'notes.txt']).content, 'Buy milk\nFinish code');
+    assert.equal(store.read(['Documents', 'notes.txt']).content, 'Make the next useful thing.\n\nStart with a question. Build a small answer. Leave it better than you found it.\n\nA note from Sean / Vector Index\nhttps://vectorindex.cloud\n\nYour next idea:\n');
 });
 
 test('normalizes absolute, relative, home and parent paths without requiring existence', () => {
@@ -166,7 +166,7 @@ test('case-sensitive names and safely shadowed Object method names remain usable
     assert.deepEqual(store.restore(id), path);
     store.create(['Documents'], 'hasOwnProperty');
     store.create(['Documents'], 'Notes.txt');
-    assert.equal(store.read(['Documents', 'notes.txt']).content, 'Buy milk\nFinish code');
+    assert.equal(store.read(['Documents', 'notes.txt']).content, 'Make the next useful thing.\n\nStart with a question. Build a small answer. Leave it better than you found it.\n\nA note from Sean / Vector Index\nhttps://vectorindex.cloud\n\nYour next idea:\n');
     assert.equal(store.read(['Documents', 'Notes.txt']).content, '');
 });
 
@@ -377,7 +377,7 @@ test('write permission failures and read failures preserve unsaved data and can 
     storage.writeError = new Error('Access denied');
     assert.throws(() => store.write(['Documents', 'notes.txt'], 'new'), code('EIO'));
     assert.equal(storage.raw(), before);
-    assert.equal(store.read(['Documents', 'notes.txt']).content, 'Buy milk\nFinish code');
+    assert.equal(store.read(['Documents', 'notes.txt']).content, 'Make the next useful thing.\n\nStart with a question. Build a small answer. Leave it better than you found it.\n\nA note from Sean / Vector Index\nhttps://vectorindex.cloud\n\nYour next idea:\n');
     storage.writeError = null;
     store.write(['Documents', 'notes.txt'], 'new');
     assert.equal(store.read(['Documents', 'notes.txt']).content, 'new');
@@ -511,8 +511,10 @@ test('external deletion or corrupt replacement also blocks stale writes', () => 
 
 test('node count limit also rejects mutations transactionally at the exact boundary', () => {
     const state = savedState();
-    // The seed contains the root plus seven folder/file nodes.
-    for (let i = 0; i < 4992; i += 1) state.root.children.Downloads.children[`file-${i}`] = { type: 'text', content: '' };
+    // Fill to the boundary independently of the bundled example count.
+    const count = node => 1 + (node.type === 'folder' ? Object.values(node.children).reduce((total, child) => total + count(child), 0) : 0);
+    const remaining = 5000 - count(state.root);
+    for (let i = 0; i < remaining; i += 1) state.root.children.Downloads.children[`file-${i}`] = { type: 'text', content: '' };
     const storage = new MemoryStorage(JSON.stringify(state));
     const store = new MacFileStore(storage);
     assert.equal(store.readOnly, false);
@@ -575,4 +577,20 @@ test('read-only corrupted storage rejects emptyTrash without resetting saved byt
     const storage = new MemoryStorage('{broken'); const store = new MacFileStore(storage);
     assert.throws(() => store.emptyTrash(), code('EROFS'));
     assert.equal(storage.raw(), '{broken'); assert.equal(storage.writes, 0);
+});
+
+
+test('personalized first-run examples never replace previously saved documents', () => {
+    const state = savedState();
+    state.root.children.Documents.children['notes.txt'].content = 'My existing private draft';
+    state.root.children.Desktop.children['Welcome.txt'].content = 'My edited welcome';
+    delete state.root.children.Desktop.children.Project.children['About Sean.txt'];
+    const storage = new MemoryStorage(JSON.stringify(state));
+    const original = storage.raw();
+    const store = new MacFileStore(storage);
+    assert.equal(store.read(['Documents', 'notes.txt']).content, 'My existing private draft');
+    assert.equal(store.read(['Desktop', 'Welcome.txt']).content, 'My edited welcome');
+    assert.deepEqual(store.list(['Desktop', 'Project']), []);
+    assert.equal(storage.raw(), original);
+    assert.equal(storage.writes, 0);
 });

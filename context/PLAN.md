@@ -120,3 +120,5 @@ Status: implementation in progress; source push, Pages publication and final liv
 - Validate static assets, existing regressions, new configuration and data-preservation behavior, available browser engines, and actual public Pages flows. Recheck remote heads immediately before nonforce pushes; publish the exact develop site tree through existing gh-pages. Report commit, default branch, build and live checks separately, with remaining blockers. No new paid resources, credentials or security changes.
 
 Application coverage and final evidence: context/PERSONALIZATION.md. URL contract: docs/STARTUP_CONFIG.md (being added).
+
+Verification follow-up: the Windows Chromium run exposed modal Tab focus escaping at the boundary and a viewport assertion racing the resize event. Preserve the required focus/visible-window behavior: add explicit modal focus wrapping and wait for the same final viewport constraint in the test, then rerun targeted and full journeys.

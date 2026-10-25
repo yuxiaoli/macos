@@ -181,7 +181,7 @@ test('New/Save shortcuts fire once and native dialogs trap focus and cancel safe
   await boot(page);
   await page.keyboard.press('Control+n');
   expect(await windows(page, 'finder')).toBe(2);
-  const editor = await open(page, 'textedit');
+  const editor = await open(page, 'textedit', { newWindow: true });
   await editor.locator('.text-area').fill('An unsaved draft');
   await editor.locator('.text-area').press('Control+s');
   await expect(page.locator('dialog')).toHaveCount(1);
@@ -297,7 +297,8 @@ test('real pointer drag/resize, minimize, overview and Show Desktop preserve win
   await menu(page, 'View', 'showDesktop'); await expect(page.locator('#windows-container')).toHaveClass(/show-desktop/);
   await menu(page, 'View', 'showDesktop'); await expect(page.locator('#windows-container')).not.toHaveClass(/show-desktop/);
   await page.setViewportSize({ width: 720, height: 520 });
-  const small = await win.boundingBox(); expect(small.x).toBeGreaterThanOrEqual(0); expect(small.y).toBeGreaterThanOrEqual(28); expect(small.x + small.width).toBeLessThanOrEqual(721);
+  await expect.poll(async () => { const box = await win.boundingBox(); return box.x + box.width; }).toBeLessThanOrEqual(721);
+  const small = await win.boundingBox(); expect(small.x).toBeGreaterThanOrEqual(0); expect(small.y).toBeGreaterThanOrEqual(28);
   await expect(win.locator('.close-btn')).toBeInViewport();
 });
 

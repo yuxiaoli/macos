@@ -70,7 +70,7 @@ test('TextEdit persists correct per-window document and close cancellation prese
     type(first.controller, 'Persistent note\n你好 <script>alert(1)</script>'); type(second.controller, 'Different draft');
     assert.equal(await first.controller.save(), true);
     assert.equal(new w.MacFileStore(w.localStorage).read(['Desktop', 'Welcome.txt']).content, first.controller.editor.content);
-    assert.equal(second.controller.editor.dirty, true); assert.equal(store.read(['Documents', 'notes.txt']).content, 'Buy milk\nFinish code');
+    assert.equal(second.controller.editor.dirty, true); assert.equal(store.read(['Documents', 'notes.txt']).content, 'Make the next useful thing.\n\nStart with a question. Build a small answer. Leave it better than you found it.\n\nA note from Sean / Vector Index\nhttps://vectorindex.cloud\n\nYour next idea:\n');
     const closing = wm.requestClose(second.id); await tick(); click($, 'Cancel', 'dialog'); assert.equal(await closing, false);
     assert.equal(second.controller.editor.content, 'Different draft');
     const discard = wm.requestClose(second.id); await tick(); click($, 'Discard Changes', 'dialog'); assert.equal(await discard, true);
@@ -88,7 +88,7 @@ test('opening another text file creates a new document without replacing a dirty
 test('new documents use Save As; collision and Cancel retain the draft', async t => {
     const { $, wm, workspace, store } = setup(t), c = wm.openApp('textedit').controller; type(c, 'A new draft');
     let saving = c.save(); await tick(); $('dialog input').val('notes.txt'); click($, 'Save', 'dialog'); await tick();
-    assert.match($('dialog .dialog-error').text(), /already exists/); assert.equal(store.read(['Documents', 'notes.txt']).content, 'Buy milk\nFinish code');
+    assert.match($('dialog .dialog-error').text(), /already exists/); assert.equal(store.read(['Documents', 'notes.txt']).content, 'Make the next useful thing.\n\nStart with a question. Build a small answer. Leave it better than you found it.\n\nA note from Sean / Vector Index\nhttps://vectorindex.cloud\n\nYour next idea:\n');
     click($, 'Cancel', 'dialog'); assert.equal(await saving, false); assert.equal(c.editor.dirty, true);
     saving = c.save(); await tick(); $('dialog input').val('Saved draft.txt'); click($, 'Save', 'dialog'); assert.equal(await saving, true);
     assert.equal(c.editor.dirty, false); assert.equal(store.read(['Documents', 'Saved draft.txt']).content, 'A new draft');
@@ -205,7 +205,7 @@ test('invalid restored paths safely fall back and saved documents reopen their s
     const { wm } = setup(t);
     const finder = wm.openApp('finder', { restore: { path: ['Missing'] } }).controller, terminal = wm.openApp('terminal', { restore: { path: ['Missing'] } }).controller;
     const editor = wm.openApp('textedit', { restore: { path: ['Documents', 'notes.txt'], content: 'must not restore', dirty: true, font: 'monospace', size: 18 } }).controller;
-    assert.deepEqual(plain(finder.path), ['Desktop']); assert.deepEqual(plain(terminal.cwd), []); assert.equal(editor.editor.content, 'Buy milk\nFinish code'); assert.equal(editor.editor.dirty, false); assert.equal(editor.size, 18);
+    assert.deepEqual(plain(finder.path), ['Desktop']); assert.deepEqual(plain(terminal.cwd), []); assert.equal(editor.editor.content, 'Make the next useful thing.\n\nStart with a question. Build a small answer. Leave it better than you found it.\n\nA note from Sean / Vector Index\nhttps://vectorindex.cloud\n\nYour next idea:\n'); assert.equal(editor.editor.dirty, false); assert.equal(editor.size, 18);
 });
 
 
