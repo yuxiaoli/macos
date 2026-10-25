@@ -124,3 +124,10 @@ Application coverage and final evidence: context/PERSONALIZATION.md. URL contrac
 Verification follow-up: the Windows Chromium run exposed modal Tab focus escaping at the boundary and a viewport assertion racing the resize event. Preserve the required focus/visible-window behavior: add explicit modal focus wrapping and wait for the same final viewport constraint in the test, then rerun targeted and full journeys.
 
 Current update status: source personalization and startup configuration implemented/pushed; existing Pages publication succeeded and production flows verified. Detailed version, tests and live evidence are in context/PERSONALIZATION.md. Chromium/Node/schema checks pass; Windows WebKit PNG Blob storage fails identically on the pre-change baseline, and Firefox launch is blocked by host side-by-side configuration. Full cross-engine verification is not claimed.
+
+
+## Welcome document follow-up — 2026-10-25
+
+User-authorized narrow exception to first-run-only defaults: enrich Desktop/Welcome.txt with verified Sean / Yuxiao Li professional context and Vector Index links, and update existing saved Welcome.txt only when its full text exactly matches one of the two known untouched bundled legacy defaults. Preserve edited text, renamed/deleted files, notes.txt, Trash and all other filesystem content. Keep the v1 storage format.
+
+Before implementation, record and push this scope on develop. Then use focused RED/GREEN tests for fresh seeds, both untouched legacy texts, edited/missing/non-text preservation, damaged/read-only storage, quota/write failure and stale-tab protection. Reuse the existing transaction path so failed or stale writes retain the original saved data. Run file-store regressions and real browser document/persistence checks before root commits and republishes the exact site tree. No main/master changes.
