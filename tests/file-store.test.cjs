@@ -594,3 +594,125 @@ test('personalized first-run examples never replace previously saved documents',
     assert.equal(storage.raw(), original);
     assert.equal(storage.writes, 0);
 });
+
+
+const LEGACY_WELCOME_DEFAULTS = [
+    'Welcome to macOS Web Edition!\nCreate and edit files in Finder, TextEdit or Terminal.\nYour files are saved in this browser on this device.',
+    'Welcome to Sean\'s desktop.\n\nA small space for useful tools, curious experiments and ideas worth building.\nExplore my work at https://vectorindex.cloud\nFind me on GitHub: https://github.com/yuxiaoli\n\nOpen Project/About Sean.txt for a short introduction.\nCreate and edit your own files in Finder, TextEdit or Terminal. Your files are saved in this browser on this device.'
+];
+
+test('fresh Welcome has verified personal context and both exact untouched legacy defaults migrate once without other changes', () => {
+    const current = fresh().store.read(['Desktop', 'Welcome.txt']).content;
+    assert.match(current, /Project Manager at China Mobile \(Hong Kong\) Innovation Research Institute and CTO of Vector Index/);
+    assert.match(current, /Build something useful\. Leave room for curiosity/);
+    assert.match(current, /https:\/\/vectorindex\.cloud/);
+    for (const legacy of LEGACY_WELCOME_DEFAULTS) {
+        const state = savedState();
+        state.root.children.Desktop.children['Welcome.txt'].content = legacy;
+        state.root.children.Documents.children['notes.txt'].content = 'My edited notes, unchanged.';
+        const expected = JSON.parse(JSON.stringify(state));
+        expected.root.children.Desktop.children['Welcome.txt'].content = current;
+        const storage = new MemoryStorage(JSON.stringify(state));
+        const store = new MacFileStore(storage);
+        assert.equal(store.readOnly, false);
+        assert.equal(store.storageWarning, null);
+        assert.deepEqual(JSON.parse(storage.raw()), expected);
+        assert.equal(storage.writes, 1);
+        assert.equal(new MacFileStore(storage).read(['Desktop', 'Welcome.txt']).content, current);
+        assert.equal(storage.writes, 1, 'current rich copy must not be rewritten on reload');
+    }
+});
+
+
+test('Welcome migration preserves edited, missing, renamed, non-text and trashed Welcome files and never changes notes', () => {
+    const states = [];
+    for (const content of ['', 'My own welcome.', LEGACY_WELCOME_DEFAULTS[0] + '\n', LEGACY_WELCOME_DEFAULTS[1] + ' edited']) {
+        const state = savedState();
+        state.root.children.Desktop.children['Welcome.txt'].content = content;
+        states.push(state);
+    }
+    const missing = savedState();
+    delete missing.root.children.Desktop.children['Welcome.txt'];
+    states.push(missing);
+    const renamed = savedState();
+    renamed.root.children.Desktop.children['My Welcome.txt'] = {type: 'text', content: LEGACY_WELCOME_DEFAULTS[0]};
+    delete renamed.root.children.Desktop.children['Welcome.txt'];
+    states.push(renamed);
+    const folder = savedState();
+    folder.root.children.Desktop.children['Welcome.txt'] = {type: 'folder', children: {}};
+    states.push(folder);
+    const trashed = savedState();
+    delete trashed.root.children.Desktop.children['Welcome.txt'];
+    trashed.trash.push({id:'trash-1',name:'Welcome.txt',originalPath:['Desktop','Welcome.txt'],node:{type:'text',content:LEGACY_WELCOME_DEFAULTS[0]},deletedAt:'2026-10-25T00:00:00.000Z'});
+    trashed.nextTrashId = 2;
+    states.push(trashed);
+    for (const state of states) {
+        state.root.children.Documents.children['notes.txt'].content = LEGACY_WELCOME_DEFAULTS[0];
+        const raw = JSON.stringify(state), storage = new MemoryStorage(raw);
+        const store = new MacFileStore(storage);
+        assert.equal(store.readOnly, false);
+        assert.equal(store.storageWarning, null);
+        assert.equal(storage.raw(), raw);
+        assert.equal(storage.writes, 0);
+        assert.deepEqual(store.read([]).children, state.root.children);
+        assert.deepEqual(store.listTrash(), state.trash);
+    }
+});
+
+test('failed Welcome migration retains readable original state and saved bytes on quota or storage failures', () => {
+    for (const error of [quota(), new Error('Storage denied')]) {
+        const state = savedState();
+        state.root.children.Desktop.children['Welcome.txt'].content = LEGACY_WELCOME_DEFAULTS[0];
+        const raw = JSON.stringify(state), storage = new MemoryStorage(raw);
+        storage.writeError = error;
+        const store = new MacFileStore(storage);
+        assert.equal(store.readOnly, false, 'valid saved files must remain readable, not become malformed recovery samples');
+        assert.equal(store.read(['Desktop','Welcome.txt']).content, LEGACY_WELCOME_DEFAULTS[0]);
+        assert.deepEqual(store.read([]).children, state.root.children);
+        assert.equal(storage.raw(), raw);
+        assert.equal(storage.writes, 0);
+        assert.match(store.storageWarning, /Welcome update was not saved.*preserved/);
+        storage.writeError = null;
+        const retry = new MacFileStore(storage);
+        assert.match(retry.read(['Desktop','Welcome.txt']).content, /Project Manager at China Mobile/);
+        assert.equal(storage.writes, 1);
+    }
+});
+
+test('Welcome migration rejects a concurrent saved-state change and keeps other-tab data intact', () => {
+    const state = savedState();
+    state.root.children.Desktop.children['Welcome.txt'].content = LEGACY_WELCOME_DEFAULTS[0];
+    const concurrent = JSON.parse(JSON.stringify(state));
+    concurrent.root.children.Documents.children['notes.txt'].content = 'Saved by another tab.';
+    const newerRaw = JSON.stringify(concurrent), storage = new MemoryStorage(JSON.stringify(state));
+    let reads = 0;
+    storage.getItem = function (key) {
+        if (++reads === 2) this.values.set(key, newerRaw);
+        return MemoryStorage.prototype.getItem.call(this, key);
+    };
+    const store = new MacFileStore(storage);
+    assert.equal(store.readOnly, false);
+    assert.equal(store.read(['Desktop','Welcome.txt']).content, LEGACY_WELCOME_DEFAULTS[0]);
+    assert.deepEqual(store.read([]).children, state.root.children);
+    assert.equal(storage.raw(), newerRaw);
+    assert.equal(storage.writes, 0);
+    assert.match(store.storageWarning, /another tab.*Reload/);
+});
+
+test('Welcome migration never writes unreadable or malformed saved filesystem data', () => {
+    const state = savedState();
+    state.root.children.Desktop.children['Welcome.txt'].content = LEGACY_WELCOME_DEFAULTS[0];
+    for (const raw of ['{broken', JSON.stringify({...state,version:99})]) {
+        const storage = new MemoryStorage(raw), store = new MacFileStore(storage);
+        assert.equal(store.readOnly, true);
+        assert.equal(storage.raw(), raw);
+        assert.equal(storage.writes, 0);
+        assert.match(store.storageWarning, /preserved/);
+    }
+    const raw = JSON.stringify(state), storage = new MemoryStorage(raw);
+    storage.readError = new Error('Storage unreadable');
+    const store = new MacFileStore(storage);
+    assert.equal(store.readOnly, true);
+    assert.equal(storage.raw(), raw);
+    assert.equal(storage.writes, 0);
+});

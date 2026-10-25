@@ -40,7 +40,7 @@ Clipboard availability depends on browser permission and secure-context support.
 
 ## Storage and data protection
 
-Files and Trash remain in `localStorage` on this browser, device and site origin, using the existing `macos.web.filesystem.v1` format. Existing v1 files require no migration. Clearing site data removes them; private browsing may not retain them. **Export important text documents and PNG drawings for backup.**
+Files and Trash remain in `localStorage` on this browser, device and site origin, using the existing `macos.web.filesystem.v1` format. The v1 storage format is preserved. Only Desktop/Welcome.txt whose contents exactly equal one of the two known untouched bundled defaults is upgraded to the richer personal welcome. Edited welcome files, notes and deleted files are preserved. Failed upgrades keep the prior stored content and show a warning. Clearing site data removes them; private browsing may not retain them. **Export important text documents and PNG drawings for backup.**
 
 - Limits: 1 MB per text file, 4 MB serialized filesystem, 5,000 nodes.
 - Failed writes or Empty Trash transactions keep the prior in-memory/saved state.
