@@ -22,6 +22,10 @@
 
 /* Navigation is quiet; the address field is the primary control. */
 .mac-safari { display: flex; flex-direction: column; background: #fff; color: var(--text-color); overflow: hidden; }
+.safari-bookmarks { display: flex; flex-wrap: wrap; flex-shrink: 0; gap: 4px 18px; padding: 6px 16px; background: var(--surface); border-bottom: 1px solid var(--border); font-size: 11px; }
+.safari-bookmarks a { color: var(--muted); text-decoration: none; padding: 2px 0; }
+.safari-bookmarks a:hover { color: var(--text-color); text-decoration: underline; }
+.safari-bookmarks a:focus-visible { outline: 2px solid #69adf6; outline-offset: 3px; }
 .safari-toolbar { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; flex-shrink: 0; min-height: 49px; padding: 8px 12px; background: var(--surface); border-bottom: 1px solid var(--border); }
 .safari-toolbar button, .safari-external, .sketch-toolbar button { display: inline-flex; align-items: center; justify-content: center; min-height: 28px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--text-color); padding: 4px 9px; font-size: 12px; font-weight: 400; text-decoration: none; }
 .safari-toolbar button:hover:not(:disabled), .sketch-toolbar button:hover:not(:disabled), .safari-external:hover { background: var(--surface-hover); }

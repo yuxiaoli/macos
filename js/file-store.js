@@ -84,10 +84,12 @@
             version: VERSION,
             root: folder({
                 Desktop: folder({
-                    'Welcome.txt': { type: 'text', content: 'Welcome to macOS Web Edition!\nCreate and edit files in Finder, TextEdit or Terminal.\nYour files are saved in this browser on this device.' },
-                    Project: folder()
+                    'Welcome.txt': { type: 'text', content: 'Welcome to Sean\'s desktop.\n\nA small space for useful tools, curious experiments and ideas worth building.\nExplore my work at https://vectorindex.cloud\nFind me on GitHub: https://github.com/yuxiaoli\n\nOpen Project/About Sean.txt for a short introduction.\nCreate and edit your own files in Finder, TextEdit or Terminal. Your files are saved in this browser on this device.' },
+                    Project: folder({
+                        'About Sean.txt': { type: 'text', content: 'Sean / Yuxiao Li\n\nI work across software architecture, Industrial IoT, cloud services and AI applications. I enjoy turning complex systems into tools people can use.\n\nVector Index: https://vectorindex.cloud\nOpen-source work: https://github.com/yuxiaoli\nThis desktop: https://github.com/yuxiaoli/macos\n\nA few things to explore:\nCodeFlow - explore how files in a GitHub project connect.\nhttps://yuxiaoli.github.io/codeflow/\n\nVector Index banner - an ASCII vortex experiment.\nhttps://yuxiaoli.github.io/vector-index-banner/\n\nThis browser desktop began with Chetas\'s CodePen concept. Original and bundled component licenses remain in the repository.' }
+                    })
                 }),
-                Documents: folder({ 'notes.txt': { type: 'text', content: 'Buy milk\nFinish code' } }),
+                Documents: folder({ 'notes.txt': { type: 'text', content: 'Make the next useful thing.\n\nStart with a question. Build a small answer. Leave it better than you found it.\n\nA note from Sean / Vector Index\nhttps://vectorindex.cloud\n\nYour next idea:\n' } }),
                 Downloads: folder({ 'Readme.txt': { type: 'text', content: 'Downloaded text files can be exported from TextEdit.\nFiles in this desktop are stored locally in your browser.' } })
             }),
             trash: [],

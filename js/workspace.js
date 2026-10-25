@@ -95,6 +95,13 @@
                 dialog.on('cancel', e => { e.preventDefault(); if (!busy) finish(null); });
                 dialog.on('keydown', e => {
                     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (!busy) finish(null); }
+                    if (e.key === 'Tab') {
+                        const controls = form.find('input:enabled, select:enabled, textarea:enabled, button:enabled, a[href]').filter('[tabindex!="-1"]');
+                        const first = controls[0], last = controls[controls.length - 1];
+                        if (first && ((e.shiftKey && document.activeElement === first) || (!e.shiftKey && document.activeElement === last))) {
+                            e.preventDefault(); (e.shiftKey ? last : first).focus();
+                        }
+                    }
                 });
                 dialog.appendTo('body');
                 if (typeof dialog[0].showModal === 'function') dialog[0].showModal(); else dialog.attr('open', '').attr('aria-modal', 'true');
@@ -501,7 +508,7 @@
         }
         get cwd() { return this.terminal.cwd; }
         render() {
-            this.container.html('<div class="terminal-app term-output"><div class="term-line term-welcome">macOS Web Terminal</div><div class="term-line term-welcome term-hint">Type help for commands. Files stay in this browser.</div><div class="term-history"></div><div class="term-input-line"><label class="term-prompt"></label><textarea rows="1" class="term-input" aria-label="Terminal command" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" wrap="soft"></textarea></div></div>');
+            this.container.html('<div class="terminal-app term-output"><div class="term-line term-welcome">Sean / Vector Index</div><div class="term-line term-welcome term-hint">Small commands. Useful things. Type help to begin. Files stay in this browser.</div><div class="term-history"></div><div class="term-input-line"><label class="term-prompt"></label><textarea rows="1" class="term-input" aria-label="Terminal command" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" wrap="soft"></textarea></div></div>');
             this.historyElement = this.container.find('.term-history'); this.input = this.container.find('.term-input'); this.output = this.container.find('.term-output');
             const inputId = this.record.id + '-terminal-command'; this.input.attr('id', inputId); this.container.find('.term-prompt').attr('for', inputId);
             this.container.on('click.workspace', e => { if (!$(e.target).is('button') && !global.getSelection().toString()) this.input.trigger('focus'); });
@@ -534,7 +541,7 @@
             const input = this.input[0]; input.style.height = 'auto';
             input.style.height = Math.max(input.scrollHeight, parseFloat(global.getComputedStyle(input).lineHeight) || 18) + 'px';
         }
-        prompt() { return 'guest@macbook ' + this.store.formatPath(this.cwd) + ' %'; }
+        prompt() { return 'sean@vectorindex ' + this.store.formatPath(this.cwd) + ' %'; }
         updatePrompt() {
             const prompt = this.container.find('.term-prompt').text(this.prompt().slice(0, -1));
             $('<span class="term-prompt-symbol">').text('%').appendTo(prompt);
