@@ -108,3 +108,15 @@
 - **资源与回归：**阻断第三方网络后，桌面和本地应用仍能加载；运行语法/资源检查及全部测试。当前检查已通过，80 项文件与 Terminal 测试通过，DOM 测试需安装已有的 `jsdom` 依赖后运行。
 
 交付包含代码、菜单与应用回归测试、更新后的功能说明和浏览器限制说明。以顶部菜单清单及完整用户流程通过验收作为发布条件。
+
+
+## Current requested update — 2026-10-25
+
+Status: implementation in progress; source push, Pages publication and final live verification pending. This section is the active extension to the existing plan. Earlier plans and verification history are preserved.
+
+- Personalize this non-fork repository as Sean / Yuxiao Li / Vector Index, using the confirmed https://vectorindex.cloud homepage and concise verified professional facts. Review all eight built-in apps; add useful first-run notes, welcome/project files, Terminal identity, Safari shortcuts and About/source links. Keep credits/licenses. Never overwrite saved notes, files, artwork or browser state. New Document stays blank; ordinary TextEdit launch may open the existing starter notes. Do not publish private resume/contact details.
+- Add a versioned URL-encoded JSON startup parameter selecting an exact allowlist of registered built-in apps with nested per-app options, including Safari homepage. No arbitrary modules/code. Validate size, schema, unsafe URLs, duplicate parameters and prototype keys; invalid config visibly falls back. Define precedence and examples/schema. Configuration affects this visit, preserves saved files and does not overwrite the regular stored settings/workspace.
+- Preserve this repository's own reconstruction, current deployment URL/integration and existing gh-pages publication. Do not invent an upstream. All custom source edits and remote default use develop. main/master remain read-only; Boot Loader, Win11 and WebVM are outside this writer's scope.
+- Validate static assets, existing regressions, new configuration and data-preservation behavior, available browser engines, and actual public Pages flows. Recheck remote heads immediately before nonforce pushes; publish the exact develop site tree through existing gh-pages. Report commit, default branch, build and live checks separately, with remaining blockers. No new paid resources, credentials or security changes.
+
+Application coverage and final evidence: context/PERSONALIZATION.md. URL contract: docs/STARTUP_CONFIG.md (being added).
