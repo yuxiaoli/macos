@@ -15,6 +15,8 @@
     var MAX_NODES = 5000;
     var ROOT_FOLDERS = ['Desktop', 'Documents', 'Downloads'];
     var hasOwn = Function.call.bind(Object.prototype.hasOwnProperty);
+    var WELCOME_TEXT = "Welcome. Curiosity has a desktop now.\n\nI’m Sean. This is a browser pretending to be somewhere else, built on the work of open-source communities.\n\nOpen a window. Follow a hunch. Try the command you think should work. Some things will feel familiar; others are still being figured out.\n\nThe interesting part isn’t making pixels look like an operating system. It’s seeing how much of the experience lives in the details.\n\nFound a rough edge? That’s a good place to contribute.\n\nKeep exploring: https://vectorindex.cloud";
+    var LEGACY_WELCOME_TEXTS = ["Welcome to macOS Web Edition!\nCreate and edit files in Finder, TextEdit or Terminal.\nYour files are saved in this browser on this device.","Welcome to Sean's desktop.\n\nA small space for useful tools, curious experiments and ideas worth building.\nExplore my work at https://vectorindex.cloud\nFind me on GitHub: https://github.com/yuxiaoli\n\nOpen Project/About Sean.txt for a short introduction.\nCreate and edit your own files in Finder, TextEdit or Terminal. Your files are saved in this browser on this device."];
 
     function failure(message, code) {
         var error = new Error(message);
@@ -84,7 +86,7 @@
             version: VERSION,
             root: folder({
                 Desktop: folder({
-                    'Welcome.txt': { type: 'text', content: 'Welcome to Sean\'s desktop.\n\nA small space for useful tools, curious experiments and ideas worth building.\nExplore my work at https://vectorindex.cloud\nFind me on GitHub: https://github.com/yuxiaoli\n\nOpen Project/About Sean.txt for a short introduction.\nCreate and edit your own files in Finder, TextEdit or Terminal. Your files are saved in this browser on this device.' },
+                    'Welcome.txt': { type: 'text', content: WELCOME_TEXT },
                     Project: folder({
                         'About Sean.txt': { type: 'text', content: 'Sean / Yuxiao Li\n\nI work across software architecture, Industrial IoT, cloud services and AI applications. I enjoy turning complex systems into tools people can use.\n\nVector Index: https://vectorindex.cloud\nOpen-source work: https://github.com/yuxiaoli\nThis desktop: https://github.com/yuxiaoli/macos\n\nA few things to explore:\nCodeFlow - explore how files in a GitHub project connect.\nhttps://yuxiaoli.github.io/codeflow/\n\nVector Index banner - an ASCII vortex experiment.\nhttps://yuxiaoli.github.io/vector-index-banner/\n\nThis browser desktop began with Chetas\'s CodePen concept. Original and bundled component licenses remain in the repository.' }
                     })
@@ -198,6 +200,15 @@
             } catch (error) {
                 this._readOnly = true;
                 this.storageWarning = 'Saved files could not be loaded: ' + error.message + ' Sample files are read-only; the original saved data has been preserved.';
+            }
+            if (!this._readOnly) {
+                var welcome = this._state.root.children.Desktop.children['Welcome.txt'];
+                if (welcome && welcome.type === 'text' && LEGACY_WELCOME_TEXTS.indexOf(welcome.content) !== -1) {
+                    try { this.write(['Desktop', 'Welcome.txt'], WELCOME_TEXT); }
+                    catch (error) {
+                        this.storageWarning = 'The bundled Welcome update was not saved. Existing files were preserved. ' + error.message;
+                    }
+                }
             }
             return;
         }

@@ -8,7 +8,7 @@ Active scope and acceptance are recorded in the existing context/PLAN.md.
 ## Application review
 
 - Finder/Desktop: Welcome.txt and Project/About Sean.txt introduce the person, work and selected public projects in first-run examples.
-- TextEdit: Documents/notes.txt starts with an original short note about building useful things. The Dock opens the existing notes.txt on an ordinary first TextEdit launch; New Document remains blank. Edited notes are opened as saved, and deleted notes are not recreated. Saved files use the unchanged v1 filesystem and are never seeded again.
+- TextEdit: Documents/notes.txt starts with an original short note about building useful things. The Dock opens the existing notes.txt on an ordinary first TextEdit launch; New Document remains blank. Edited notes are opened as saved, and deleted notes are not recreated. Saved files use the unchanged v1 filesystem and are never reseeded. The later user-authorized exact-default Welcome upgrade is documented below.
 - Terminal: sean@vectorindex prompt, sean whoami and a brief welcome; commands and virtual file behavior retained.
 - Safari: requested Vector Index Home retained, with useful external shortcuts; URL startup config may override Home for that visit.
 - Sketch, Calculator, Settings and Trash: reviewed; practical controls, existing artwork/drafts and data behavior retained. About dialogs identify this personal desktop and retain concept/license credit, without adding advertising to calculations or artwork.
@@ -39,3 +39,13 @@ The publication and live checks below complete the implemented scope, with expli
 - WebKit full run: 23/26 passed. The earlier calendar/status timeout did not recur in three isolated repeats (3/3 passed). Both Sketch draft-save failures reproduce on the pre-change ef144dd baseline: the same PNG Blob put throws UnknownError, Error preparing Blob/File data to be stored in object store. Plain string/object writes work. DraftStore/calendar source sections are unchanged. Existing export warning protects the drawing. This is not claimed as a complete WebKit pass.
 - Official Firefox 155 / Playwright v1543 downloaded, but launch is BLOCKED by this Windows host's incorrect side-by-side configuration. The full run never reached application journeys (spawn UNKNOWN); a direct --version diagnostic confirmed the side-by-side failure. No system runtimes or security settings were changed. Firefox is not reported as passed.
 - Local external evidence: macos-live-assets.json, macos-baseline-verification.md, macos-idb-probe.json, macos-matrix.txt and macos-firefox.txt in the task workspace.
+
+## Richer Welcome follow-up — 2026-10-25
+
+The user supplied an iPhone screenshot showing the untouched old Welcome.txt still saved in their browser and explicitly requested a richer personal introduction. The scope was first recorded and pushed in canonical PLAN commit 717a1e82a92297d5fdff4fddb14b1224f176cfc9.
+
+Welcome.txt uses the approved canonical welcome; other desktop personalization is retained.
+
+Only Desktop/Welcome.txt with full text exactly equal to one of the two known untouched bundled defaults is upgraded. Edited text (including tiny edits), notes.txt, renamed/deleted files, folders and Trash are preserved. The v1 schema stays unchanged. Migration uses the normal guarded write transaction; quota/denied/stale/read failures preserve stored data and prior valid contents.
+
+Source and all 181 Node tests passed, including five migration safety cases; all 26 Chromium regression journeys passed. A mobile Chromium probe passed fresh, both untouched legacy defaults, edited Welcome/notes preservation, deleted-file preservation and zero page errors in isolated contexts. Publication and actual existing-browser upgrade are the remaining checks at this source checkpoint; final commit/evidence are recorded in the delivery report.
