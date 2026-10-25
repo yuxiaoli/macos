@@ -122,3 +122,5 @@ Status: implementation in progress; source push, Pages publication and final liv
 Application coverage and final evidence: context/PERSONALIZATION.md. URL contract: docs/STARTUP_CONFIG.md (being added).
 
 Verification follow-up: the Windows Chromium run exposed modal Tab focus escaping at the boundary and a viewport assertion racing the resize event. Preserve the required focus/visible-window behavior: add explicit modal focus wrapping and wait for the same final viewport constraint in the test, then rerun targeted and full journeys.
+
+Current update status: source personalization and startup configuration implemented/pushed; existing Pages publication succeeded and production flows verified. Detailed version, tests and live evidence are in context/PERSONALIZATION.md. Chromium/Node/schema checks pass; Windows WebKit PNG Blob storage fails identically on the pre-change baseline, and Firefox launch is blocked by host side-by-side configuration. Full cross-engine verification is not claimed.

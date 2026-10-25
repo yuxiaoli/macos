@@ -14,7 +14,7 @@ Active scope and acceptance are recorded in the existing context/PLAN.md.
 - Sketch, Calculator, Settings and Trash: reviewed; practical controls, existing artwork/drafts and data behavior retained. About dialogs identify this personal desktop and retain concept/license credit, without adding advertising to calculations or artwork.
 - Help/About: concise professional introduction and public homepage/GitHub/source references; Chetas's original concept remains credited.
 
-Validation and final source/deployment revisions will be recorded after integration.
+The publication and live checks below complete the implemented scope, with explicit browser-host limitations.
 
 ## Verification before publication
 
@@ -24,3 +24,18 @@ Validation and final source/deployment revisions will be recorded after integrat
 - JSON Schema compiled with AJV 2020-12; the example validates. Independent implementation/schema review found no blocker.
 - Explicit modal Tab wrapping fixed a reproduced Chromium focus escape; viewport test now waits for the same required bounds after the resize event.
 - Firefox engine installation and final live publication checks are pending at this source checkpoint.
+
+## Publication and live verification — 2026-10-25
+
+- Feature source develop 5aa1ded991e8bd25e9ed2bd53a5527eafee85058; existing Pages publication 81ec508df45c934b0b84e788a25f086113f7b758, a fast-forward descendant of the prior gh-pages head. Both have site tree 1b0a3b2b0ebb6416129187a9a4afe1ed7bb67bce.
+- Pages build succeeded: https://github.com/yuxiaoli/macos/actions/runs/40203254225 . Public URL remains https://yuxiaoli.github.io/macos/ . Nine fetched HTML/runtime/style files returned HTTP 200 and SHA-256 hashes equal canonical source Git blobs (Windows working-copy CRLF conversion is excluded from this comparison).
+- A fresh production browser verified page identity, first-run notes, ordinary TextEdit opening the notes, normal eight-app Dock, Terminal prompt/whoami, and About text with original Chetas credit.
+- Production startup URL enabled exactly Safari/TextEdit/Calculator, restored the saved notes, set nested Safari Home to https://vectorindex.cloud/work, and showed the temporary-config notice. Invalid version/unsafe URL config restored all default apps and the regular workspace with a visible warning. Saved documents were not replaced.
+- Public Vector Index portfolio loaded normally through Safari's Open Externally action in Chrome. Embedded page rendering could not be verified in the macOS frame in this environment; its fallback remains available and no sandbox/certificate/security settings were weakened.
+
+## Browser verification limitations
+
+- Chromium: 26/26 passed. Node: 176/176 passed. Static check and AJV schema/example validation passed. New startup journeys also passed WebKit.
+- WebKit full run: 23/26 passed. The earlier calendar/status timeout did not recur in three isolated repeats (3/3 passed). Both Sketch draft-save failures reproduce on the pre-change ef144dd baseline: the same PNG Blob put throws UnknownError, Error preparing Blob/File data to be stored in object store. Plain string/object writes work. DraftStore/calendar source sections are unchanged. Existing export warning protects the drawing. This is not claimed as a complete WebKit pass.
+- Official Firefox 155 / Playwright v1543 downloaded, but launch is BLOCKED by this Windows host's incorrect side-by-side configuration. The full run never reached application journeys (spawn UNKNOWN); a direct --version diagnostic confirmed the side-by-side failure. No system runtimes or security settings were changed. Firefox is not reported as passed.
+- Local external evidence: macos-live-assets.json, macos-baseline-verification.md, macos-idb-probe.json, macos-matrix.txt and macos-firefox.txt in the task workspace.
