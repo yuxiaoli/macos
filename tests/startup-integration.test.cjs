@@ -85,3 +85,15 @@ test('URL config is temporary: saved documents/settings/session survive; configu
         for (const [key, value] of Object.entries(saved)) assert.equal(x.w.localStorage.getItem(key), value);
     } finally {x.close();}
 });
+
+
+test('fresh normal TextEdit launch opens the exact canonical starter document through the unchanged Dock path', () => {
+    const canonical = fs.readFileSync(require('node:path').join(__dirname, 'fixtures/canonical-welcome.txt'), 'utf8');
+    const x = desktop('');
+    try {
+        const editor = x.wm.openApp('textedit');
+        assert.deepEqual(Array.from(editor.controller.editor.path), ['Documents', 'notes.txt']);
+        assert.equal(editor.controller.editor.content, canonical);
+        assert.equal(editor.controller.textarea.val(), canonical);
+    } finally {x.close();}
+});

@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const MacFileStore = require('../site/js/file-store.js');
+const canonicalWelcome = fs.readFileSync(require('node:path').join(__dirname, 'fixtures/canonical-welcome.txt'), 'utf8');
 
 class MemoryStorage {
     constructor(initial = null) {
@@ -52,7 +53,7 @@ test('first run seeds and persists three home folders and usable text samples', 
     assert.equal(store.read([]).name, '/');
     assert.equal(store.read(['Desktop', 'Project']).type, 'folder');
     assert.match(store.read(['Desktop', 'Welcome.txt']).content, /Welcome/);
-    assert.equal(store.read(['Documents', 'notes.txt']).content, 'Make the next useful thing.\n\nStart with a question. Build a small answer. Leave it better than you found it.\n\nA note from Sean / Vector Index\nhttps://vectorindex.cloud\n\nYour next idea:\n');
+    assert.equal(store.read(['Documents', 'notes.txt']).content, canonicalWelcome);
     assert.equal(store.read(['Downloads', 'Readme.txt']).type, 'text');
     assert.throws(() => store.read(['Downloads', 'image.jpg']), code('ENOENT'));
     const loaded = new MacFileStore(storage);
@@ -66,7 +67,7 @@ test('UMD exports the constructor in a browser and uses localStorage by default'
     vm.runInNewContext(fs.readFileSync(require.resolve('../site/js/file-store.js'), 'utf8'), sandbox);
     assert.equal(typeof sandbox.MacFileStore, 'function');
     const store = new sandbox.MacFileStore();
-    assert.equal(store.read(['Documents', 'notes.txt']).content, 'Make the next useful thing.\n\nStart with a question. Build a small answer. Leave it better than you found it.\n\nA note from Sean / Vector Index\nhttps://vectorindex.cloud\n\nYour next idea:\n');
+    assert.equal(store.read(['Documents', 'notes.txt']).content, canonicalWelcome);
     assert.ok(storage.raw());
 });
 
@@ -107,7 +108,7 @@ test('read, list, returned paths and Bin entries are defensive copies', () => {
     root.children.Documents.children['notes.txt'].content = 'mutated';
     const listed = store.list(['Documents']);
     listed[0].content = 'mutated';
-    assert.equal(store.read(['Documents', 'notes.txt']).content, 'Make the next useful thing.\n\nStart with a question. Build a small answer. Leave it better than you found it.\n\nA note from Sean / Vector Index\nhttps://vectorindex.cloud\n\nYour next idea:\n');
+    assert.equal(store.read(['Documents', 'notes.txt']).content, canonicalWelcome);
     const path = store.create(['Documents'], 'new.txt');
     path[0] = 'Downloads';
     assert.equal(store.read(['Documents', 'new.txt']).type, 'text');
@@ -119,7 +120,7 @@ test('read, list, returned paths and Bin entries are defensive copies', () => {
     trash[0].originalPath[0] = 'Downloads';
     trash.push({});
     assert.deepEqual(store.restore(id), ['Documents', 'notes.txt']);
-    assert.equal(store.read(['Documents', 'notes.txt']).content, 'Make the next useful thing.\n\nStart with a question. Build a small answer. Leave it better than you found it.\n\nA note from Sean / Vector Index\nhttps://vectorindex.cloud\n\nYour next idea:\n');
+    assert.equal(store.read(['Documents', 'notes.txt']).content, canonicalWelcome);
 });
 
 test('normalizes absolute, relative, home and parent paths without requiring existence', () => {
@@ -166,7 +167,7 @@ test('case-sensitive names and safely shadowed Object method names remain usable
     assert.deepEqual(store.restore(id), path);
     store.create(['Documents'], 'hasOwnProperty');
     store.create(['Documents'], 'Notes.txt');
-    assert.equal(store.read(['Documents', 'notes.txt']).content, 'Make the next useful thing.\n\nStart with a question. Build a small answer. Leave it better than you found it.\n\nA note from Sean / Vector Index\nhttps://vectorindex.cloud\n\nYour next idea:\n');
+    assert.equal(store.read(['Documents', 'notes.txt']).content, canonicalWelcome);
     assert.equal(store.read(['Documents', 'Notes.txt']).content, '');
 });
 
@@ -377,7 +378,7 @@ test('write permission failures and read failures preserve unsaved data and can 
     storage.writeError = new Error('Access denied');
     assert.throws(() => store.write(['Documents', 'notes.txt'], 'new'), code('EIO'));
     assert.equal(storage.raw(), before);
-    assert.equal(store.read(['Documents', 'notes.txt']).content, 'Make the next useful thing.\n\nStart with a question. Build a small answer. Leave it better than you found it.\n\nA note from Sean / Vector Index\nhttps://vectorindex.cloud\n\nYour next idea:\n');
+    assert.equal(store.read(['Documents', 'notes.txt']).content, canonicalWelcome);
     storage.writeError = null;
     store.write(['Documents', 'notes.txt'], 'new');
     assert.equal(store.read(['Documents', 'notes.txt']).content, 'new');
@@ -596,15 +597,12 @@ test('personalized first-run examples never replace previously saved documents',
 });
 
 
-const LEGACY_WELCOME_DEFAULTS = [
-    'Welcome to macOS Web Edition!\nCreate and edit files in Finder, TextEdit or Terminal.\nYour files are saved in this browser on this device.',
-    'Welcome to Sean\'s desktop.\n\nA small space for useful tools, curious experiments and ideas worth building.\nExplore my work at https://vectorindex.cloud\nFind me on GitHub: https://github.com/yuxiaoli\n\nOpen Project/About Sean.txt for a short introduction.\nCreate and edit your own files in Finder, TextEdit or Terminal. Your files are saved in this browser on this device.'
-];
+const PRIOR_RICH_WELCOME = "Welcome. Curiosity has a desktop now.\n\nI’m Sean. This is a browser pretending to be somewhere else, built on the work of open-source communities.\n\nOpen a window. Follow a hunch. Try the command you think should work. Some things will feel familiar; others are still being figured out.\n\nThe interesting part isn’t making pixels look like an operating system. It’s seeing how much of the experience lives in the details.\n\nFound a rough edge? That’s a good place to contribute.\n\nKeep exploring: https://vectorindex.cloud";
+const LEGACY_WELCOME_DEFAULTS = ['Welcome to macOS Web Edition!\nCreate and edit files in Finder, TextEdit or Terminal.\nYour files are saved in this browser on this device.','Welcome to Sean\'s desktop.\n\nA small space for useful tools, curious experiments and ideas worth building.\nExplore my work at https://vectorindex.cloud\nFind me on GitHub: https://github.com/yuxiaoli\n\nOpen Project/About Sean.txt for a short introduction.\nCreate and edit your own files in Finder, TextEdit or Terminal. Your files are saved in this browser on this device.'];
 
-test('fresh Welcome has verified personal context and both exact untouched legacy defaults migrate once without other changes', () => {
+test('all three exact untouched legacy Welcome defaults migrate once to canonical text without other changes', () => {
     const current = fresh().store.read(['Desktop', 'Welcome.txt']).content;
-    assert.match(current, /Welcome\. Curiosity has a desktop now\./);
-    assert.match(current, /Build something useful\. Leave room for curiosity/);
+    assert.equal(current, canonicalWelcome);
     assert.match(current, /https:\/\/vectorindex\.cloud/);
     for (const legacy of LEGACY_WELCOME_DEFAULTS) {
         const state = savedState();
@@ -619,14 +617,14 @@ test('fresh Welcome has verified personal context and both exact untouched legac
         assert.deepEqual(JSON.parse(storage.raw()), expected);
         assert.equal(storage.writes, 1);
         assert.equal(new MacFileStore(storage).read(['Desktop', 'Welcome.txt']).content, current);
-        assert.equal(storage.writes, 1, 'current rich copy must not be rewritten on reload');
+        assert.equal(storage.writes, 1, 'canonical copy must not be rewritten on reload');
     }
 });
 
 
 test('Welcome migration preserves edited, missing, renamed, non-text and trashed Welcome files and never changes notes', () => {
     const states = [];
-    for (const content of ['', 'My own welcome.', LEGACY_WELCOME_DEFAULTS[0] + '\n', LEGACY_WELCOME_DEFAULTS[1] + ' edited']) {
+    for (const content of ['', 'My own welcome.', ...LEGACY_WELCOME_DEFAULTS.flatMap(legacy => [legacy + '\n', legacy + ' edited'])]) {
         const state = savedState();
         state.root.children.Desktop.children['Welcome.txt'].content = content;
         states.push(state);
@@ -634,18 +632,20 @@ test('Welcome migration preserves edited, missing, renamed, non-text and trashed
     const missing = savedState();
     delete missing.root.children.Desktop.children['Welcome.txt'];
     states.push(missing);
-    const renamed = savedState();
-    renamed.root.children.Desktop.children['My Welcome.txt'] = {type: 'text', content: LEGACY_WELCOME_DEFAULTS[0]};
-    delete renamed.root.children.Desktop.children['Welcome.txt'];
-    states.push(renamed);
-    const folder = savedState();
-    folder.root.children.Desktop.children['Welcome.txt'] = {type: 'folder', children: {}};
-    states.push(folder);
-    const trashed = savedState();
-    delete trashed.root.children.Desktop.children['Welcome.txt'];
-    trashed.trash.push({id:'trash-1',name:'Welcome.txt',originalPath:['Desktop','Welcome.txt'],node:{type:'text',content:LEGACY_WELCOME_DEFAULTS[0]},deletedAt:'2026-10-25T00:00:00.000Z'});
-    trashed.nextTrashId = 2;
-    states.push(trashed);
+    for (const legacy of LEGACY_WELCOME_DEFAULTS) {
+        const renamed = savedState();
+        renamed.root.children.Desktop.children['My Welcome.txt'] = {type: 'text', content: legacy};
+        delete renamed.root.children.Desktop.children['Welcome.txt'];
+        states.push(renamed);
+        const folder = savedState();
+        folder.root.children.Desktop.children['Welcome.txt'] = {type: 'folder', children: {'Nested.txt': {type: 'text', content: legacy}}};
+        states.push(folder);
+        const trashed = savedState();
+        delete trashed.root.children.Desktop.children['Welcome.txt'];
+        trashed.trash.push({id:'trash-1',name:'Welcome.txt',originalPath:['Desktop','Welcome.txt'],node:{type:'text',content:legacy},deletedAt:'2026-10-25T00:00:00.000Z'});
+        trashed.nextTrashId = 2;
+        states.push(trashed);
+    }
     for (const state of states) {
         state.root.children.Documents.children['notes.txt'].content = LEGACY_WELCOME_DEFAULTS[0];
         const raw = JSON.stringify(state), storage = new MemoryStorage(raw);
@@ -674,7 +674,7 @@ test('failed Welcome migration retains readable original state and saved bytes o
         assert.match(store.storageWarning, /Welcome update was not saved.*preserved/);
         storage.writeError = null;
         const retry = new MacFileStore(storage);
-        assert.match(retry.read(['Desktop','Welcome.txt']).content, /Welcome\. Curiosity has a desktop now\./);
+        assert.equal(retry.read(['Desktop','Welcome.txt']).content, canonicalWelcome);
         assert.equal(storage.writes, 1);
     }
 });
@@ -715,4 +715,37 @@ test('Welcome migration never writes unreadable or malformed saved filesystem da
     assert.equal(store.readOnly, true);
     assert.equal(storage.raw(), raw);
     assert.equal(storage.writes, 0);
+});
+
+
+test('fresh Welcome and TextEdit starter notes exactly match the approved canonical blob without appended text', () => {
+    const crypto = require('node:crypto');
+    const bytes = Buffer.from(canonicalWelcome, 'utf8');
+    assert.equal(bytes.length, 525);
+    assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'), '8cfade6f56f8046d1a2deae329e43d3f024095917d18dc11e436b095d9c9fb36');
+    assert.equal(crypto.createHash('sha1').update(Buffer.concat([Buffer.from('blob 525\0'), bytes])).digest('hex'), 'fe7e9edba1d4cbbe07d44e43dea42bd5e3f234b7');
+    assert.equal(canonicalWelcome.endsWith('Keep exploring: https://vectorindex.cloud'), true);
+    const {store} = fresh();
+    assert.equal(store.read(['Desktop', 'Welcome.txt']).content, canonicalWelcome);
+    assert.equal(store.read(['Documents', 'notes.txt']).content, canonicalWelcome);
+});
+
+
+test("untouched legacy Welcome upgrades while saved previous-seed, edited, empty and deleted notes remain unchanged", () => {
+    const priorNotes = 'Make the next useful thing.\n\nStart with a question. Build a small answer. Leave it better than you found it.\n\nA note from Sean / Vector Index\nhttps://vectorindex.cloud\n\nYour next idea:\n';
+    for (const notes of [priorNotes, 'My own notes.', '', undefined]) {
+        const state = savedState();
+        state.root.children.Desktop.children['Welcome.txt'].content = LEGACY_WELCOME_DEFAULTS[0];
+        if (notes === undefined) delete state.root.children.Documents.children['notes.txt'];
+        else state.root.children.Documents.children['notes.txt'].content = notes;
+        const expected = JSON.parse(JSON.stringify(state));
+        expected.root.children.Desktop.children['Welcome.txt'].content = canonicalWelcome;
+        const storage = new MemoryStorage(JSON.stringify(state));
+        const store = new MacFileStore(storage);
+        assert.equal(store.read(['Desktop', 'Welcome.txt']).content, canonicalWelcome);
+        assert.deepEqual(JSON.parse(storage.raw()), expected);
+        assert.equal(storage.writes, 1);
+        assert.equal(new MacFileStore(storage).read(['Desktop', 'Welcome.txt']).content, canonicalWelcome);
+        assert.equal(storage.writes, 1);
+    }
 });
