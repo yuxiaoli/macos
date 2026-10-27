@@ -16,24 +16,14 @@
     var ROOT_FOLDERS = ['Desktop', 'Documents', 'Downloads'];
     var hasOwn = Function.call.bind(Object.prototype.hasOwnProperty);
     var WELCOME_TEXT = "Welcome. Curiosity has a desktop now.\n\nI’m Sean. This is a browser pretending to be somewhere else, built on the work of open-source communities.\n\nOpen a window. Follow a hunch. Try the command you think should work. Some things will feel familiar; others are still being figured out.\n\nThe interesting part isn’t making pixels look like an operating system. It’s seeing how much of the experience lives in the details.\n\nFound a rough edge? That’s a good place to contribute.\n\nKeep exploring: https://vectorindex.cloud";
-    var LEGACY_WELCOME_TEXTS = ["Welcome to macOS Web Edition!\nCreate and edit files in Finder, TextEdit or Terminal.\nYour files are saved in this browser on this device.","Welcome to Sean's desktop.\n\nA small space for useful tools, curious experiments and ideas worth building.\nExplore my work at https://vectorindex.cloud\nFind me on GitHub: https://github.com/yuxiaoli\n\nOpen Project/About Sean.txt for a short introduction.\nCreate and edit your own files in Finder, TextEdit or Terminal. Your files are saved in this browser on this device."];
-function _welcomeHistoryByteLength(text) {
-        var bytes = 0;
-        for (var i = 0; i < text.length; i += 1) {
-            var code = text.charCodeAt(i);
-            if (code < 0x80) bytes += 1;
-            else if (code < 0x800) bytes += 2;
-            else if (code >= 0xD800 && code <= 0xDBFF && i + 1 < text.length &&
-                text.charCodeAt(i + 1) >= 0xDC00 && text.charCodeAt(i + 1) <= 0xDFFF) {
-                bytes += 4;
-                i += 1;
-            } else bytes += 3;
-        }
-        return bytes;
-    }
-function _welcomeHistorySha256(text) {
+    var LEGACY_WELCOME_FINGERPRINTS = [{"characters":137,"bytes":137,"sha256":"674026d96aa033112d460086ef815de53f03d3412eca0391100c9af74f598f72"},{"characters":369,"bytes":369,"sha256":"9b9a506e17e6266ab78194b07f512e598c1cb2a10deadcc14990ab19fdb5cf3e"},{"characters":725,"bytes":731,"sha256":"7c70312c5a1edb947fa2238de34f32a00a191d86c1778abb9da9e163f36a824a"}];
+
+    // Synchronous SHA-256, following FIPS 180-4 sections 4/5/6.2 (not a certification claim).
+    // https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
+    // Returns null for malformed UTF-16: replacement encoding could make an edit lossy.
+    function sha256(text) {
         if (typeof text !== 'string') return null;
-        var bytes = new Uint8Array(_welcomeHistoryByteLength(text)), at = 0;
+        var bytes = new Uint8Array(byteLength(text)), at = 0;
         for (var i = 0; i < text.length; i += 1) {
             var code = text.charCodeAt(i);
             if (code >= 0xD800 && code <= 0xDBFF) {
@@ -93,11 +83,18 @@ function _welcomeHistorySha256(text) {
         }
         return hash.map(function (word) { return ('00000000' + word.toString(16)).slice(-8); }).join('');
     }
-function _welcomeHistoryLegacyIndex(value) {
-  const index = LEGACY_WELCOME_TEXTS.indexOf(value);
-  return index !== -1 ? index : (typeof value === "string" && _welcomeHistorySha256(value) === "7c70312c5a1edb947fa2238de34f32a00a191d86c1778abb9da9e163f36a824a" ? LEGACY_WELCOME_TEXTS.length : -1);
-}
 
+    function isLegacyWelcome(text) {
+        if (typeof text !== 'string') return false;
+        // Only the three known short lengths are eligible: never hash arbitrary saved documents.
+        var candidates = LEGACY_WELCOME_FINGERPRINTS.filter(function (entry) { return entry.characters === text.length; });
+        if (!candidates.length) return false;
+        var bytes = byteLength(text);
+        candidates = candidates.filter(function (entry) { return entry.bytes === bytes; });
+        if (!candidates.length) return false;
+        var digest = sha256(text);
+        return digest !== null && candidates.some(function (entry) { return entry.sha256 === digest; });
+    }
 
     function failure(message, code) {
         var error = new Error(message);
@@ -284,7 +281,7 @@ function _welcomeHistoryLegacyIndex(value) {
             }
             if (!this._readOnly) {
                 var welcome = this._state.root.children.Desktop.children['Welcome.txt'];
-                if (welcome && welcome.type === 'text' && _welcomeHistoryLegacyIndex(welcome.content) !== -1) {
+                if (welcome && welcome.type === 'text' && isLegacyWelcome(welcome.content)) {
                     try { this.write(['Desktop', 'Welcome.txt'], WELCOME_TEXT); }
                     catch (error) {
                         this.storageWarning = 'The bundled Welcome update was not saved. Existing files were preserved. ' + error.message;
@@ -499,6 +496,7 @@ function _welcomeHistoryLegacyIndex(value) {
         return '/' + validatePath(path).join('/');
     };
 
+    MacFileStore.sha256 = sha256;
     MacFileStore.STORAGE_KEY = STORAGE_KEY;
     MacFileStore.VERSION = VERSION;
     MacFileStore.MAX_CONTENT_BYTES = MAX_CONTENT_BYTES;
