@@ -17,6 +17,87 @@
     var hasOwn = Function.call.bind(Object.prototype.hasOwnProperty);
     var WELCOME_TEXT = "Welcome. Curiosity has a desktop now.\n\nI’m Sean. This is a browser pretending to be somewhere else, built on the work of open-source communities.\n\nOpen a window. Follow a hunch. Try the command you think should work. Some things will feel familiar; others are still being figured out.\n\nThe interesting part isn’t making pixels look like an operating system. It’s seeing how much of the experience lives in the details.\n\nFound a rough edge? That’s a good place to contribute.\n\nKeep exploring: https://vectorindex.cloud";
     var LEGACY_WELCOME_TEXTS = ["Welcome to macOS Web Edition!\nCreate and edit files in Finder, TextEdit or Terminal.\nYour files are saved in this browser on this device.","Welcome to Sean's desktop.\n\nA small space for useful tools, curious experiments and ideas worth building.\nExplore my work at https://vectorindex.cloud\nFind me on GitHub: https://github.com/yuxiaoli\n\nOpen Project/About Sean.txt for a short introduction.\nCreate and edit your own files in Finder, TextEdit or Terminal. Your files are saved in this browser on this device."];
+function _welcomeHistoryByteLength(text) {
+        var bytes = 0;
+        for (var i = 0; i < text.length; i += 1) {
+            var code = text.charCodeAt(i);
+            if (code < 0x80) bytes += 1;
+            else if (code < 0x800) bytes += 2;
+            else if (code >= 0xD800 && code <= 0xDBFF && i + 1 < text.length &&
+                text.charCodeAt(i + 1) >= 0xDC00 && text.charCodeAt(i + 1) <= 0xDFFF) {
+                bytes += 4;
+                i += 1;
+            } else bytes += 3;
+        }
+        return bytes;
+    }
+function _welcomeHistorySha256(text) {
+        if (typeof text !== 'string') return null;
+        var bytes = new Uint8Array(_welcomeHistoryByteLength(text)), at = 0;
+        for (var i = 0; i < text.length; i += 1) {
+            var code = text.charCodeAt(i);
+            if (code >= 0xD800 && code <= 0xDBFF) {
+                var low = text.charCodeAt(i + 1);
+                if (!(low >= 0xDC00 && low <= 0xDFFF)) return null;
+                code = 0x10000 + ((code & 0x3FF) << 10) + (low & 0x3FF);
+                i += 1;
+            } else if (code >= 0xDC00 && code <= 0xDFFF) return null;
+            if (code < 0x80) bytes[at++] = code;
+            else if (code < 0x800) {
+                bytes[at++] = 0xC0 | (code >>> 6); bytes[at++] = 0x80 | (code & 63);
+            } else if (code < 0x10000) {
+                bytes[at++] = 0xE0 | (code >>> 12); bytes[at++] = 0x80 | ((code >>> 6) & 63); bytes[at++] = 0x80 | (code & 63);
+            } else {
+                bytes[at++] = 0xF0 | (code >>> 18); bytes[at++] = 0x80 | ((code >>> 12) & 63);
+                bytes[at++] = 0x80 | ((code >>> 6) & 63); bytes[at++] = 0x80 | (code & 63);
+            }
+        }
+        var padded = new Uint8Array(Math.ceil((bytes.length + 9) / 64) * 64);
+        padded.set(bytes); padded[bytes.length] = 0x80;
+        var view = new DataView(padded.buffer);
+        view.setUint32(padded.length - 8, Math.floor(bytes.length / 0x20000000), false);
+        view.setUint32(padded.length - 4, (bytes.length * 8) >>> 0, false);
+        var hash = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+        var k = [
+            0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+            0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+            0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+            0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+            0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+            0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+            0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+            0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+        ];
+        var words = new Uint32Array(64);
+        function rotate(value, bits) { return (value >>> bits) | (value << (32 - bits)); }
+        for (var offset = 0; offset < padded.length; offset += 64) {
+            for (i = 0; i < 16; i += 1) words[i] = view.getUint32(offset + i * 4, false);
+            for (i = 16; i < 64; i += 1) {
+                var x = words[i - 15], y = words[i - 2];
+                var small0 = rotate(x, 7) ^ rotate(x, 18) ^ (x >>> 3);
+                var small1 = rotate(y, 17) ^ rotate(y, 19) ^ (y >>> 10);
+                words[i] = (words[i - 16] + small0 + words[i - 7] + small1) >>> 0;
+            }
+            var a = hash[0], b = hash[1], c = hash[2], d = hash[3], e = hash[4], f = hash[5], g = hash[6], h = hash[7];
+            for (i = 0; i < 64; i += 1) {
+                var sum1 = rotate(e, 6) ^ rotate(e, 11) ^ rotate(e, 25);
+                var choice = (e & f) ^ (~e & g);
+                var temp1 = (h + sum1 + choice + k[i] + words[i]) >>> 0;
+                var sum0 = rotate(a, 2) ^ rotate(a, 13) ^ rotate(a, 22);
+                var majority = (a & b) ^ (a & c) ^ (b & c);
+                var temp2 = (sum0 + majority) >>> 0;
+                h = g; g = f; f = e; e = (d + temp1) >>> 0; d = c; c = b; b = a; a = (temp1 + temp2) >>> 0;
+            }
+            var result = [a,b,c,d,e,f,g,h];
+            for (i = 0; i < 8; i += 1) hash[i] = (hash[i] + result[i]) >>> 0;
+        }
+        return hash.map(function (word) { return ('00000000' + word.toString(16)).slice(-8); }).join('');
+    }
+function _welcomeHistoryLegacyIndex(value) {
+  const index = LEGACY_WELCOME_TEXTS.indexOf(value);
+  return index !== -1 ? index : (typeof value === "string" && _welcomeHistorySha256(value) === "7c70312c5a1edb947fa2238de34f32a00a191d86c1778abb9da9e163f36a824a" ? LEGACY_WELCOME_TEXTS.length : -1);
+}
+
 
     function failure(message, code) {
         var error = new Error(message);
@@ -91,7 +172,7 @@
                         'About Sean.txt': { type: 'text', content: 'Sean / Yuxiao Li\n\nI work across software architecture, Industrial IoT, cloud services and AI applications. I enjoy turning complex systems into tools people can use.\n\nVector Index: https://vectorindex.cloud\nOpen-source work: https://github.com/yuxiaoli\nThis desktop: https://github.com/yuxiaoli/macos\n\nA few things to explore:\nCodeFlow - explore how files in a GitHub project connect.\nhttps://yuxiaoli.github.io/codeflow/\n\nVector Index banner - an ASCII vortex experiment.\nhttps://yuxiaoli.github.io/vector-index-banner/\n\nThis browser desktop began with Chetas\'s CodePen concept. Original and bundled component licenses remain in the repository.' }
                     })
                 }),
-                Documents: folder({ 'notes.txt': { type: 'text', content: 'Make the next useful thing.\n\nStart with a question. Build a small answer. Leave it better than you found it.\n\nA note from Sean / Vector Index\nhttps://vectorindex.cloud\n\nYour next idea:\n' } }),
+                Documents: folder({ 'notes.txt': { type: 'text', content: WELCOME_TEXT } }),
                 Downloads: folder({ 'Readme.txt': { type: 'text', content: 'Downloaded text files can be exported from TextEdit.\nFiles in this desktop are stored locally in your browser.' } })
             }),
             trash: [],
@@ -203,7 +284,7 @@
             }
             if (!this._readOnly) {
                 var welcome = this._state.root.children.Desktop.children['Welcome.txt'];
-                if (welcome && welcome.type === 'text' && LEGACY_WELCOME_TEXTS.indexOf(welcome.content) !== -1) {
+                if (welcome && welcome.type === 'text' && _welcomeHistoryLegacyIndex(welcome.content) !== -1) {
                     try { this.write(['Desktop', 'Welcome.txt'], WELCOME_TEXT); }
                     catch (error) {
                         this.storageWarning = 'The bundled Welcome update was not saved. Existing files were preserved. ' + error.message;
