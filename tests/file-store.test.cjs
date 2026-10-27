@@ -597,26 +597,31 @@ test('personalized first-run examples never replace previously saved documents',
 });
 
 
-const PRIOR_RICH_WELCOME = "Welcome. Curiosity has a desktop now.\n\nI’m Sean. This is a browser pretending to be somewhere else, built on the work of open-source communities.\n\nOpen a window. Follow a hunch. Try the command you think should work. Some things will feel familiar; others are still being figured out.\n\nThe interesting part isn’t making pixels look like an operating system. It’s seeing how much of the experience lives in the details.\n\nFound a rough edge? That’s a good place to contribute.\n\nKeep exploring: https://vectorindex.cloud";
-const LEGACY_WELCOME_DEFAULTS = ['Welcome to macOS Web Edition!\nCreate and edit files in Finder, TextEdit or Terminal.\nYour files are saved in this browser on this device.','Welcome to Sean\'s desktop.\n\nA small space for useful tools, curious experiments and ideas worth building.\nExplore my work at https://vectorindex.cloud\nFind me on GitHub: https://github.com/yuxiaoli\n\nOpen Project/About Sean.txt for a short introduction.\nCreate and edit your own files in Finder, TextEdit or Terminal. Your files are saved in this browser on this device.'];
+// Same-length synthetic inputs exercise migration without retaining historical welcome plaintext.
+const SYNTHETIC_LEGACY_DEFAULTS = [
+    'Synthetic legacy A.'.padEnd(137, '.'),
+    'Synthetic legacy B.'.padEnd(369, '.'),
+    'Synthetic legacy C.\u2014\u2014\u2014'.padEnd(725, '.')
+];
+const SyntheticLegacyStore = require('./helpers/synthetic-legacy-store.cjs')(SYNTHETIC_LEGACY_DEFAULTS).Store;
 
-test('all three exact untouched legacy Welcome defaults migrate once to canonical text without other changes', () => {
+test('all three synthetic fingerprint matches migrate once to canonical text without other changes', () => {
     const current = fresh().store.read(['Desktop', 'Welcome.txt']).content;
     assert.equal(current, canonicalWelcome);
     assert.match(current, /https:\/\/vectorindex\.cloud/);
-    for (const legacy of LEGACY_WELCOME_DEFAULTS) {
+    for (const legacy of SYNTHETIC_LEGACY_DEFAULTS) {
         const state = savedState();
         state.root.children.Desktop.children['Welcome.txt'].content = legacy;
         state.root.children.Documents.children['notes.txt'].content = 'My edited notes, unchanged.';
         const expected = JSON.parse(JSON.stringify(state));
         expected.root.children.Desktop.children['Welcome.txt'].content = current;
         const storage = new MemoryStorage(JSON.stringify(state));
-        const store = new MacFileStore(storage);
+        const store = new SyntheticLegacyStore(storage);
         assert.equal(store.readOnly, false);
         assert.equal(store.storageWarning, null);
         assert.deepEqual(JSON.parse(storage.raw()), expected);
         assert.equal(storage.writes, 1);
-        assert.equal(new MacFileStore(storage).read(['Desktop', 'Welcome.txt']).content, current);
+        assert.equal(new SyntheticLegacyStore(storage).read(['Desktop', 'Welcome.txt']).content, current);
         assert.equal(storage.writes, 1, 'canonical copy must not be rewritten on reload');
     }
 });
@@ -624,7 +629,7 @@ test('all three exact untouched legacy Welcome defaults migrate once to canonica
 
 test('Welcome migration preserves edited, missing, renamed, non-text and trashed Welcome files and never changes notes', () => {
     const states = [];
-    for (const content of ['', 'My own welcome.', ...LEGACY_WELCOME_DEFAULTS.flatMap(legacy => [legacy + '\n', legacy + ' edited'])]) {
+    for (const content of ['', 'My own welcome.', ...SYNTHETIC_LEGACY_DEFAULTS.flatMap(legacy => [legacy + '\n', legacy + ' edited'])]) {
         const state = savedState();
         state.root.children.Desktop.children['Welcome.txt'].content = content;
         states.push(state);
@@ -632,7 +637,7 @@ test('Welcome migration preserves edited, missing, renamed, non-text and trashed
     const missing = savedState();
     delete missing.root.children.Desktop.children['Welcome.txt'];
     states.push(missing);
-    for (const legacy of LEGACY_WELCOME_DEFAULTS) {
+    for (const legacy of SYNTHETIC_LEGACY_DEFAULTS) {
         const renamed = savedState();
         renamed.root.children.Desktop.children['My Welcome.txt'] = {type: 'text', content: legacy};
         delete renamed.root.children.Desktop.children['Welcome.txt'];
@@ -647,9 +652,9 @@ test('Welcome migration preserves edited, missing, renamed, non-text and trashed
         states.push(trashed);
     }
     for (const state of states) {
-        state.root.children.Documents.children['notes.txt'].content = LEGACY_WELCOME_DEFAULTS[0];
+        state.root.children.Documents.children['notes.txt'].content = SYNTHETIC_LEGACY_DEFAULTS[0];
         const raw = JSON.stringify(state), storage = new MemoryStorage(raw);
-        const store = new MacFileStore(storage);
+        const store = new SyntheticLegacyStore(storage);
         assert.equal(store.readOnly, false);
         assert.equal(store.storageWarning, null);
         assert.equal(storage.raw(), raw);
@@ -662,18 +667,18 @@ test('Welcome migration preserves edited, missing, renamed, non-text and trashed
 test('failed Welcome migration retains readable original state and saved bytes on quota or storage failures', () => {
     for (const error of [quota(), new Error('Storage denied')]) {
         const state = savedState();
-        state.root.children.Desktop.children['Welcome.txt'].content = LEGACY_WELCOME_DEFAULTS[0];
+        state.root.children.Desktop.children['Welcome.txt'].content = SYNTHETIC_LEGACY_DEFAULTS[0];
         const raw = JSON.stringify(state), storage = new MemoryStorage(raw);
         storage.writeError = error;
-        const store = new MacFileStore(storage);
+        const store = new SyntheticLegacyStore(storage);
         assert.equal(store.readOnly, false, 'valid saved files must remain readable, not become malformed recovery samples');
-        assert.equal(store.read(['Desktop','Welcome.txt']).content, LEGACY_WELCOME_DEFAULTS[0]);
+        assert.equal(store.read(['Desktop','Welcome.txt']).content, SYNTHETIC_LEGACY_DEFAULTS[0]);
         assert.deepEqual(store.read([]).children, state.root.children);
         assert.equal(storage.raw(), raw);
         assert.equal(storage.writes, 0);
         assert.match(store.storageWarning, /Welcome update was not saved.*preserved/);
         storage.writeError = null;
-        const retry = new MacFileStore(storage);
+        const retry = new SyntheticLegacyStore(storage);
         assert.equal(retry.read(['Desktop','Welcome.txt']).content, canonicalWelcome);
         assert.equal(storage.writes, 1);
     }
@@ -681,7 +686,7 @@ test('failed Welcome migration retains readable original state and saved bytes o
 
 test('Welcome migration rejects a concurrent saved-state change and keeps other-tab data intact', () => {
     const state = savedState();
-    state.root.children.Desktop.children['Welcome.txt'].content = LEGACY_WELCOME_DEFAULTS[0];
+    state.root.children.Desktop.children['Welcome.txt'].content = SYNTHETIC_LEGACY_DEFAULTS[0];
     const concurrent = JSON.parse(JSON.stringify(state));
     concurrent.root.children.Documents.children['notes.txt'].content = 'Saved by another tab.';
     const newerRaw = JSON.stringify(concurrent), storage = new MemoryStorage(JSON.stringify(state));
@@ -690,9 +695,9 @@ test('Welcome migration rejects a concurrent saved-state change and keeps other-
         if (++reads === 2) this.values.set(key, newerRaw);
         return MemoryStorage.prototype.getItem.call(this, key);
     };
-    const store = new MacFileStore(storage);
+    const store = new SyntheticLegacyStore(storage);
     assert.equal(store.readOnly, false);
-    assert.equal(store.read(['Desktop','Welcome.txt']).content, LEGACY_WELCOME_DEFAULTS[0]);
+    assert.equal(store.read(['Desktop','Welcome.txt']).content, SYNTHETIC_LEGACY_DEFAULTS[0]);
     assert.deepEqual(store.read([]).children, state.root.children);
     assert.equal(storage.raw(), newerRaw);
     assert.equal(storage.writes, 0);
@@ -701,9 +706,9 @@ test('Welcome migration rejects a concurrent saved-state change and keeps other-
 
 test('Welcome migration never writes unreadable or malformed saved filesystem data', () => {
     const state = savedState();
-    state.root.children.Desktop.children['Welcome.txt'].content = LEGACY_WELCOME_DEFAULTS[0];
+    state.root.children.Desktop.children['Welcome.txt'].content = SYNTHETIC_LEGACY_DEFAULTS[0];
     for (const raw of ['{broken', JSON.stringify({...state,version:99})]) {
-        const storage = new MemoryStorage(raw), store = new MacFileStore(storage);
+        const storage = new MemoryStorage(raw), store = new SyntheticLegacyStore(storage);
         assert.equal(store.readOnly, true);
         assert.equal(storage.raw(), raw);
         assert.equal(storage.writes, 0);
@@ -711,7 +716,7 @@ test('Welcome migration never writes unreadable or malformed saved filesystem da
     }
     const raw = JSON.stringify(state), storage = new MemoryStorage(raw);
     storage.readError = new Error('Storage unreadable');
-    const store = new MacFileStore(storage);
+    const store = new SyntheticLegacyStore(storage);
     assert.equal(store.readOnly, true);
     assert.equal(storage.raw(), raw);
     assert.equal(storage.writes, 0);
@@ -731,21 +736,21 @@ test('fresh Welcome and TextEdit starter notes exactly match the approved canoni
 });
 
 
-test("untouched legacy Welcome upgrades while saved previous-seed, edited, empty and deleted notes remain unchanged", () => {
+test('synthetic fingerprint Welcome upgrade while saved previous-seed, edited, empty and deleted notes remain unchanged', () => {
     const priorNotes = 'Make the next useful thing.\n\nStart with a question. Build a small answer. Leave it better than you found it.\n\nA note from Sean / Vector Index\nhttps://vectorindex.cloud\n\nYour next idea:\n';
     for (const notes of [priorNotes, 'My own notes.', '', undefined]) {
         const state = savedState();
-        state.root.children.Desktop.children['Welcome.txt'].content = LEGACY_WELCOME_DEFAULTS[0];
+        state.root.children.Desktop.children['Welcome.txt'].content = SYNTHETIC_LEGACY_DEFAULTS[2];
         if (notes === undefined) delete state.root.children.Documents.children['notes.txt'];
         else state.root.children.Documents.children['notes.txt'].content = notes;
         const expected = JSON.parse(JSON.stringify(state));
         expected.root.children.Desktop.children['Welcome.txt'].content = canonicalWelcome;
         const storage = new MemoryStorage(JSON.stringify(state));
-        const store = new MacFileStore(storage);
+        const store = new SyntheticLegacyStore(storage);
         assert.equal(store.read(['Desktop', 'Welcome.txt']).content, canonicalWelcome);
         assert.deepEqual(JSON.parse(storage.raw()), expected);
         assert.equal(storage.writes, 1);
-        assert.equal(new MacFileStore(storage).read(['Desktop', 'Welcome.txt']).content, canonicalWelcome);
+        assert.equal(new SyntheticLegacyStore(storage).read(['Desktop', 'Welcome.txt']).content, canonicalWelcome);
         assert.equal(storage.writes, 1);
     }
 });
