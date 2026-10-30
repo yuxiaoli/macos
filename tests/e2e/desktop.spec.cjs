@@ -369,6 +369,20 @@ test('Safari uses configured Home, tracks its own history, rejects unsafe addres
   await expect(win.locator('.safari-status')).toContainText(/cannot|could not|unverified|verified|Externally|appear/i);
 });
 
+test('Safari activation avoids a panel-wide focus frame while controls retain keyboard focus', async ({ page }) => {
+  await page.route('https://vectorindex.cloud/**', route => route.fulfill({ contentType: 'text/html', body: '<h1>Home</h1>' }));
+  await boot(page);
+  const win = await open(page, 'safari');
+  const content = win.locator('.window-content');
+  await expect(content).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
+  await expect(content).toHaveCSS('outline-style', 'none');
+  await page.keyboard.press('Tab');
+  const home = win.locator('[data-app-command="home"]');
+  await expect(home).toBeFocused();
+  await expect(home).toHaveCSS('outline-style', 'solid');
+});
 test('desktop-only menus disable window commands and local Help dialogs are usable', async ({ page }) => {
   await boot(page);
   await page.locator('.window .close-btn').click();

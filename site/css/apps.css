@@ -20,6 +20,9 @@
 .calculator-key.zero { grid-column: span 2; text-align: left; padding-left: calc(25% - 7px); }
 .calculator-help { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
+/* The window manager focuses this container on activation; controls retain their own focus indicators. */
+.window[data-app='safari'] > .window-content:focus-visible { outline: none; }
+
 /* Navigation is quiet; the address field is the primary control. */
 .mac-safari { display: flex; flex-direction: column; background: #fff; color: var(--text-color); overflow: hidden; }
 .safari-bookmarks { display: flex; flex-wrap: wrap; flex-shrink: 0; gap: 4px 18px; padding: 6px 16px; background: var(--surface); border-bottom: 1px solid var(--border); font-size: 11px; }
