@@ -130,7 +130,7 @@
             dock.replaceChildren();
             this.apps.forEach(app => {
                 if (app.separator) dock.append(el('span', 'dock-separator'));
-                const item = button('', 'dock-item', () => this.openApp(app.id));
+                const item = button('', 'dock-item', event => this.openApp(app.id, { pointerActivation: event.detail > 0 }));
                 item.id = 'dock-' + app.id;
                 item.title = app.name;
                 item.setAttribute('aria-label', app.name);
@@ -221,7 +221,7 @@
             }
             if (existing.length && (!config.multi || (!options.newWindow && !(appId === 'textedit' && path)))) {
                 if (appId === 'finder' && path) existing[0].controller?.navigate?.(path);
-                this.focusWindow(existing[0].id);
+                this.focusWindow(existing[0].id, true, this.restoring || options.pointerActivation);
                 return existing[0];
             }
             const id = 'window-' + (++this.counter);
@@ -273,7 +273,7 @@
                 record.controller = { snapshot: () => null, dispose() {} };
                 this.workspace?.report(error.message, true);
             }
-            this.focusWindow(id);
+            this.focusWindow(id, true, this.restoring || options.pointerActivation);
             setTimeout(() => windowElement.classList.remove('opening'), 220);
             this.emit();
             return record;
@@ -286,7 +286,7 @@
             record.element.setAttribute('aria-label', record.title);
             this.emit();
         }
-        focusWindow(id, focusContent = true) {
+        focusWindow(id, focusContent = true, suppressFinderFocus = false) {
             if (this.activeGesture && this.activeGesture.record.id !== id) this.activeGesture.finish();
             const record = this.windows[id];
             if (!record) return;
@@ -305,7 +305,16 @@
             record.element.style.zIndex = String(100 + this.clock);
             if (focusContent && !record.element.contains(document.activeElement)) {
                 if (record.controller?.focus) record.controller.focus();
-                else (record.content.querySelector('.mac-calculator, .text-area, .term-input, .finder-grid') || record.content).focus({ preventScroll: true });
+                else {
+                    const target = record.content.querySelector('.mac-calculator, .text-area, .term-input, .finder-grid') || record.content;
+                    if (suppressFinderFocus && target.matches('.workspace-finder .finder-grid')) {
+                        target.classList.add('finder-auto-focus');
+                        const showFocus = () => target.classList.remove('finder-auto-focus');
+                        target.addEventListener('keydown', showFocus, { once: true });
+                        target.addEventListener('blur', () => { showFocus(); target.removeEventListener('keydown', showFocus); }, { once: true });
+                    }
+                    target.focus({ preventScroll: true });
+                }
             }
             this.emit();
         }
@@ -320,7 +329,7 @@
         activateDesktop() { this.focusDesktop(); }
         activateRecent() {
             const next = this.listWindows().filter(record => !record.minimized).sort((a, b) => b.lastFocused - a.lastFocused)[0];
-            if (next && !this.desktopShown) this.focusWindow(next.id);
+            if (next && !this.desktopShown) this.focusWindow(next.id, true, this.restoring);
             else this.focusDesktop();
         }
         async preflight(records) {
@@ -617,7 +626,7 @@
                     if (saved.minimized === true) this.minimizeWindow(record.id);
                     if (saved.active && !saved.minimized) active = record.id;
                 }
-                if (active) this.focusWindow(active);
+                if (active) this.focusWindow(active, true, true);
                 else this.activateRecent();
             } finally { this.restoring = false; this.emit(); }
         }
