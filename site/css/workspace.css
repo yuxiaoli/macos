@@ -236,5 +236,6 @@ button, input, select, textarea { font: inherit; }
 .finder-toolbar .workspace-button[data-command="forward"] { --navigation-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m8%204%206%206-6%206%22%2F%3E%3C%2Fsvg%3E"); }
 .finder-toolbar .workspace-button[data-command="up"] { --navigation-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.7%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m4%2012%206-6%206%206%22%2F%3E%3C%2Fsvg%3E"); }
 
-/* Keyboard focus belongs to the file list, rather than preselecting Search. */
-.workspace-finder .finder-grid:focus-visible { outline: none; box-shadow: inset 0 1px 0 color-mix(in srgb, var(--accent) 50%, transparent); }
+/* Keep the list focus visible without drawing a blue line beneath the toolbar. */
+.workspace-finder .finder-grid:focus-visible { outline: none; box-shadow: none; }
+.workspace-finder .finder-grid:focus-visible:not(.finder-auto-focus) { outline: 2px solid var(--muted); outline-offset: -3px; }
